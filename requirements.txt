@@ -1,0 +1,27 @@
+email-validator
+
+# DNS and email domain utilities
+dnspython
+disposable-email-domains
+
+# CLI
+typer
+
+# Async support
+asyncio
+aiosmtplib
+
+# Logging
+loguru
+
+# Data validation
+pydantic
+
+# Testing
+pytest
+pytest-asyncio
+
+# Code style and formatting
+black
+isort
+flake8
