@@ -1,49 +1,15 @@
-"""
-Tests for the disposable email validator.
-"""
-
 import pytest
-from email_validator_tool.validators.disposable import DisposableEmailValidator
+from email_validator_tool.validators.disposable import DisposableValidator
+from email_validator_tool.core.models import ValidationStatus
 
-def test_disposable_validator_initialization():
-    """Test disposable email validator initialization."""
-    validator = DisposableEmailValidator()
-    assert validator is not None
-    assert validator.name == "disposable"
+@pytest.mark.asyncio
+async def test_disposable_detected():
+    validator = DisposableValidator()
+    result = await validator.validate("user@mailinator.com")
+    assert result.status == ValidationStatus.DISPOSABLE
 
-def test_disposable_validation(valid_email, validation_result):
-    """Test disposable email validation with a valid email."""
-    validator = DisposableEmailValidator()
-    result = validator.validate(valid_email, validation_result)
-    assert isinstance(result, bool)
-    assert result is True
-
-def test_disposable_validation_with_disposable_email(disposable_email, validation_result):
-    """Test disposable email validation with a disposable email."""
-    validator = DisposableEmailValidator()
-    result = validator.validate(disposable_email, validation_result)
-    assert isinstance(result, bool)
-    assert result is False
-
-def test_disposable_validation_with_common_disposable_domains(validation_result):
-    """Test disposable email validation with common disposable domains."""
-    validator = DisposableEmailValidator()
-    disposable_domains = [
-        "mailinator.com",
-        "tempmail.com",
-        "throwawaymail.com",
-        "guerrillamail.com",
-        "10minutemail.com"
-    ]
-    for domain in disposable_domains:
-        email = f"test@{domain}"
-        result = validator.validate(email, validation_result)
-        assert isinstance(result, bool)
-        assert result is False
-
-def test_disposable_validation_with_invalid_email(invalid_email, validation_result):
-    """Test disposable email validation with an invalid email."""
-    validator = DisposableEmailValidator()
-    result = validator.validate(invalid_email, validation_result)
-    assert isinstance(result, bool)
-    assert result is False
+@pytest.mark.asyncio
+async def test_non_disposable():
+    validator = DisposableValidator()
+    result = await validator.validate("user@example.com")
+    assert result.status == ValidationStatus.VALID

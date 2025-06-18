@@ -1,13 +1,12 @@
 import random
 import string
 import aiosmtplib
-import aiohttp
+import dns.resolver
 from email.mime.text import MIMEText
 from loguru import logger
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
 from email_validator_tool.config import Settings
 
-SETTINGS = Settings()
 
 def generate_random_email(domain: str) -> str:
     """Generate a random email address for the given domain."""
@@ -18,9 +17,8 @@ class CatchAllValidator:
     """Validator for checking if a domain has catch-all enabled"""
     
     def __init__(self):
-        """Initialize the validator"""
-        self.api_url = "https://catchall.debounce.io/v1/catchall"
-        self.api_key = None  # Set your API key here
+        """Initialize the validator without external API."""
+        self.settings = Settings()
     
     async def validate(self, email: str) -> ValidationResult:
         """
@@ -36,33 +34,66 @@ class CatchAllValidator:
             domain = email.split('@')[1]
             logger.debug(f"Checking if domain {domain} has catch-all enabled")
             
-            async with aiohttp.ClientSession() as session:
-                params = {'email': email}
-                if self.api_key:
-                    params['api_key'] = self.api_key
-                    
-                async with session.get(self.api_url, params=params) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        if data.get('catchall'):
-                            logger.warning(f"Domain {domain} has catch-all enabled")
-                            return ValidationResult(
-                                email=email,
-                                status=ValidationStatus.CATCH_ALL,
-                                details="Domain has catch-all enabled"
-                            )
-                        logger.info(f"Domain {domain} does not have catch-all enabled")
+            if not self.settings.ENABLE_CATCH_ALL:
+                logger.debug("Catch-all check disabled in settings")
+                return ValidationResult(email=email, status=ValidationStatus.VALID)
+
+            try:
+                mx_records = dns.resolver.resolve(domain, 'MX')
+                if not mx_records:
+                    return ValidationResult(
+                        email=email,
+                        status=ValidationStatus.INVALID_MX,
+                        details="No MX records found",
+                    )
+            except dns.resolver.NXDOMAIN:
+                return ValidationResult(
+                    email=email,
+                    status=ValidationStatus.INVALID_DOMAIN,
+                    details="Domain does not exist",
+                )
+            except dns.resolver.NoAnswer:
+                return ValidationResult(
+                    email=email,
+                    status=ValidationStatus.INVALID_MX,
+                    details="No MX records found",
+                )
+
+            mx_host = str(mx_records[0].exchange)
+            random_email = generate_random_email(domain)
+
+            try:
+                async with aiosmtplib.SMTP(
+                    hostname=mx_host,
+                    port=self.settings.SMTP_PORT,
+                    timeout=self.settings.SMTP_TIMEOUT,
+                ) as smtp:
+                    await smtp.ehlo()
+                    await smtp.mail(f"verify@{domain}")
+                    response = await smtp.rcpt(random_email)
+                    if response.code == 250:
+                        logger.warning(f"Domain {domain} has catch-all enabled")
                         return ValidationResult(
                             email=email,
-                            status=ValidationStatus.VALID
+                            status=ValidationStatus.CATCH_ALL,
+                            details="Domain has catch-all enabled",
                         )
+                    elif response.code == 550:
+                        logger.info(f"Domain {domain} does not have catch-all enabled")
+                        return ValidationResult(email=email, status=ValidationStatus.VALID)
                     else:
-                        logger.error(f"Error checking catch-all status: {response.status}")
                         return ValidationResult(
                             email=email,
                             status=ValidationStatus.UNKNOWN_ERROR,
-                            details=f"API error: {response.status}"
+                            details=f"Unexpected SMTP code {response.code}",
                         )
+            except aiosmtplib.SMTPException as exc:
+                logger.error(f"SMTP error during catch-all check: {exc}")
+                return ValidationResult(
+                    email=email,
+                    status=ValidationStatus.UNKNOWN_ERROR,
+                    details=f"SMTP error: {str(exc)}",
+                )
                         
         except Exception as e:
             logger.error(f"Error validating catch-all status for {email}: {str(e)}")

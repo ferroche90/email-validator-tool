@@ -43,3 +43,8 @@ class DNSMXValidator:
                 status=ValidationStatus.UNKNOWN_ERROR,
                 details=f"DNS error: {str(exc)}"
             )
+
+async def check(email: str) -> ValidationResult:
+    """Convenience wrapper to validate a single email."""
+    return await DNSMXValidator().validate(email)
+

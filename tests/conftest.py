@@ -2,9 +2,14 @@
 Common test fixtures for email validator tests.
 """
 
+import sys
+from pathlib import Path
 import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
 from email_validator_tool.core.results import ValidationResult
-from email_validator_tool.core.pipeline import ValidationPipeline
 
 @pytest.fixture
 def valid_email():
@@ -31,7 +36,3 @@ def validation_result():
     """Return a ValidationResult instance for testing."""
     return ValidationResult()
 
-@pytest.fixture
-def validation_pipeline():
-    """Return a ValidationPipeline instance for testing."""
-    return ValidationPipeline()

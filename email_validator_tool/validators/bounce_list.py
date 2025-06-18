@@ -1,8 +1,7 @@
 import sqlite3
 from pathlib import Path
-from email_validator_tool.core.models import ValidationResult, ValidationStatus
-import aiohttp
 from loguru import logger
+from email_validator_tool.core.models import ValidationResult, ValidationStatus
 
 DB_PATH = Path("bounce_list.db")
 
@@ -23,10 +22,18 @@ def setup_database():
 class BounceListValidator:
     """Validator for checking if an email is in a bounce list"""
     
-    def __init__(self):
-        """Initialize the validator"""
-        self.api_url = "https://bounce.debounce.io/v1/bounce"
-        self.api_key = None  # Set your API key here
+    def __init__(self, db_path: Path = DB_PATH):
+        """Initialize the validator using a local SQLite database."""
+        self.db_path = db_path
+        setup_database(self.db_path)
+
+    def add_email(self, email: str) -> None:
+        """Add an email to the local bounce list."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        cursor.execute("INSERT OR IGNORE INTO bounces (email) VALUES (?)", (email,))
+        conn.commit()
+        conn.close()
     
     async def validate(self, email: str) -> ValidationResult:
         """
@@ -41,33 +48,22 @@ class BounceListValidator:
         try:
             logger.debug(f"Checking if {email} is in bounce list")
             
-            async with aiohttp.ClientSession() as session:
-                params = {'email': email}
-                if self.api_key:
-                    params['api_key'] = self.api_key
-                    
-                async with session.get(self.api_url, params=params) as response:
-                    if response.status == 200:
-                        data = await response.json()
-                        if data.get('bounce'):
-                            logger.warning(f"Email {email} is in bounce list")
-                            return ValidationResult(
-                                email=email,
-                                status=ValidationStatus.ON_BOUNCE_LIST,
-                                details="Email is in bounce list"
-                            )
-                        logger.info(f"Email {email} is not in bounce list")
-                        return ValidationResult(
-                            email=email,
-                            status=ValidationStatus.VALID
-                        )
-                    else:
-                        logger.error(f"Error checking bounce status: {response.status}")
-                        return ValidationResult(
-                            email=email,
-                            status=ValidationStatus.UNKNOWN_ERROR,
-                            details=f"API error: {response.status}"
-                        )
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM bounces WHERE email = ?", (email,))
+            row = cursor.fetchone()
+            conn.close()
+
+            if row:
+                logger.warning(f"Email {email} is in bounce list")
+                return ValidationResult(
+                    email=email,
+                    status=ValidationStatus.ON_BOUNCE_LIST,
+                    details="Email is in bounce list",
+                )
+
+            logger.info(f"Email {email} is not in bounce list")
+            return ValidationResult(email=email, status=ValidationStatus.VALID)
                         
         except Exception as e:
             logger.error(f"Error validating bounce status for {email}: {str(e)}")

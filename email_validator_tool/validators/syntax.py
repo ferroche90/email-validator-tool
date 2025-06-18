@@ -28,3 +28,8 @@ class SyntaxValidator:
                 status=ValidationStatus.UNKNOWN_ERROR,
                 details=f"Syntax validation error: {str(e)}"
             )
+
+async def check(email: str) -> ValidationResult:
+    """Convenience wrapper to validate a single email."""
+    return await SyntaxValidator().validate(email)
+
