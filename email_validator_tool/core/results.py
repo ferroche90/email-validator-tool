@@ -1,6 +1,6 @@
 from typing import List, Dict
 from loguru import logger
-from email_validator_tool.core.models import ValidationResult
+from email_validator_tool.core.models import ValidationResult, ValidationStatus
 
 def generate_summary(results: List[ValidationResult]) -> None:
     """
@@ -14,7 +14,7 @@ def generate_summary(results: List[ValidationResult]) -> None:
         return
         
     # Count results by status
-    status_counts: Dict[str, int] = {}
+    status_counts: Dict[ValidationStatus, int] = {}
     for result in results:
         status = result.status
         status_counts[status] = status_counts.get(status, 0) + 1
@@ -29,7 +29,7 @@ def generate_summary(results: List[ValidationResult]) -> None:
         logger.info(f"{status}: {count} ({percentage:.1f}%)")
     
     # Display details for invalid emails
-    invalid_emails = [r for r in results if r.status != "valid"]
+    invalid_emails = [r for r in results if r.status != ValidationStatus.VALID]
     if invalid_emails:
         logger.info("\nInvalid Emails Details:")
         logger.info("-" * 50)
@@ -37,6 +37,4 @@ def generate_summary(results: List[ValidationResult]) -> None:
             logger.info(f"\nEmail: {result.email}")
             logger.info(f"Status: {result.status}")
             if result.details:
-                logger.info("Details:")
-                for key, value in result.details.items():
-                    logger.info(f"  - {key}: {value}")
+                logger.info(f"Details: {result.details}")
