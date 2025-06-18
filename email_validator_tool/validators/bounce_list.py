@@ -20,36 +20,6 @@ def setup_database():
     conn.commit()
     conn.close()
 
-async def check(email: str) -> ValidationResult:
-    """Check if the email exists in the bounce list database."""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT 1 FROM bounces WHERE email = ?", (email,))
-        exists = cursor.fetchone() is not None
-        
-        conn.close()
-        
-        if exists:
-            return ValidationResult(
-                email=email,
-                status=ValidationStatus.ON_BOUNCE_LIST,
-                details="Email found in bounce list database"
-            )
-        
-        return ValidationResult(
-            email=email,
-            status=ValidationStatus.VALID
-        )
-        
-    except sqlite3.Error as e:
-        return ValidationResult(
-            email=email,
-            status=ValidationStatus.UNKNOWN_ERROR,
-            details=f"Database error: {str(e)}"
-        )
-
 class BounceListValidator:
     """Validator for checking if an email is in a bounce list"""
     
@@ -84,7 +54,7 @@ class BounceListValidator:
                             return ValidationResult(
                                 email=email,
                                 status=ValidationStatus.ON_BOUNCE_LIST,
-                                details={"reason": "Email is in bounce list"}
+                                details="Email is in bounce list"
                             )
                         logger.info(f"Email {email} is not in bounce list")
                         return ValidationResult(
@@ -96,7 +66,7 @@ class BounceListValidator:
                         return ValidationResult(
                             email=email,
                             status=ValidationStatus.UNKNOWN_ERROR,
-                            details={"error": f"API error: {response.status}"}
+                            details=f"API error: {response.status}"
                         )
                         
         except Exception as e:
@@ -104,7 +74,7 @@ class BounceListValidator:
             return ValidationResult(
                 email=email,
                 status=ValidationStatus.UNKNOWN_ERROR,
-                details={"error": str(e)}
+                details=str(e)
             )
 
 # Initialize database on module import

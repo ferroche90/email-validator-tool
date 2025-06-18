@@ -54,7 +54,7 @@ class RoleAccountValidator:
                 return ValidationResult(
                     email=email,
                     status=ValidationStatus.ROLE_ACCOUNT,
-                    details={"reason": f"Local part '{local_part}' is a role account"}
+                    details=f"Local part '{local_part}' is a role account"
                 )
             
             logger.info(f"Email {email} is not a role account")
@@ -68,5 +68,5 @@ class RoleAccountValidator:
             return ValidationResult(
                 email=email,
                 status=ValidationStatus.UNKNOWN_ERROR,
-                details={"error": str(e)}
+                details=str(e)
             )

@@ -37,7 +37,7 @@ class DisposableValidator:
                             return ValidationResult(
                                 email=email,
                                 status=ValidationStatus.DISPOSABLE,
-                                details={"reason": "Domain is disposable"}
+                                details="Domain is disposable"
                             )
                         logger.info(f"Domain {domain} is not disposable")
                         return ValidationResult(
@@ -49,7 +49,7 @@ class DisposableValidator:
                         return ValidationResult(
                             email=email,
                             status=ValidationStatus.UNKNOWN_ERROR,
-                            details={"error": f"API error: {response.status}"}
+                            details=f"API error: {response.status}"
                         )
                         
         except Exception as e:
@@ -57,5 +57,5 @@ class DisposableValidator:
             return ValidationResult(
                 email=email,
                 status=ValidationStatus.UNKNOWN_ERROR,
-                details={"error": str(e)}
+                details=str(e)
             )
