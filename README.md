@@ -1,52 +1,52 @@
 # Email Validator Tool
 
-Una herramienta profesional de línea de comandos para validar correos electrónicos mediante múltiples capas de verificación, incluyendo sintaxis, DNS/MX, dominios desechables, cuentas de rol, lista de rebotes, y opcionalmente, detección de catch-all y verificación SMTP.
+A professional command-line tool for validating email addresses through multiple verification layers, including syntax, DNS/MX, disposable domains, role accounts, bounce list, and optionally, catch-all detection and SMTP verification.
 
-## Stack Tecnológico
+## Technology Stack
 
-- **Python 3.8+**: Lenguaje base
-- **email-validator**: Validación de sintaxis RFC
-- **dnspython**: Verificación de registros MX
-- **disposable-email-domains**: Detección de dominios desechables
-- **email-role-detector**: Detección de cuentas de rol
-- **aiosmtplib**: Verificación SMTP asíncrona
-- **Typer**: Interfaz de línea de comandos
-- **Pydantic**: Validación de datos y configuración
-- **Loguru**: Sistema de logging
-- **SQLite**: Base de datos local para lista de rebotes
-- **pytest**: Framework de testing
-- **Black/isort/flake8**: Formateo y linting
+- **Python 3.8+**: Base language
+- **email-validator**: RFC syntax validation
+- **dnspython**: MX records verification
+- **disposable-email-domains**: Disposable domain detection
+- **email-role-detector**: Role account detection
+- **aiosmtplib**: Asynchronous SMTP verification
+- **Typer**: Command-line interface
+- **Pydantic**: Data validation and configuration
+- **Loguru**: Logging system
+- **SQLite**: Local database for bounce list
+- **pytest**: Testing framework
+- **Black/isort/flake8**: Formatting and linting
 
-## Instalación
+## Installation
 
-1. Clonar el repositorio:
+1. Clone the repository:
    ```bash
-   git clone https://github.com/tu-usuario/email-validator-tool.git
+   git clone https://github.com/your-username/email-validator-tool.git
    cd email-validator-tool
    ```
 
-2. Crear y activar entorno virtual:
+2. Create and activate virtual environment:
    ```bash
    python -m venv venv
-   # En Windows:
+   # On Windows:
    .\venv\Scripts\activate
-   # En Unix/MacOS:
+   # On Unix/MacOS:
    source venv/bin/activate
    ```
 
-3. Instalar dependencias:
+3. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-## Configuración
+## Configuration
 
-1. Copiar el archivo de ejemplo:
+1. Copy the example file:
    ```bash
    cp .env.example .env
    ```
 
-2. Ajustar las variables en `.env`:
+2. Adjust variables in `.env`:
    ```
    CSV_INPUT_PATH=emails.csv
    CSV_OUTPUT_PATH=results.csv
@@ -57,75 +57,75 @@ Una herramienta profesional de línea de comandos para validar correos electrón
    ENABLE_SMTP=False
    ```
 
-## Uso
+## Usage
 
-Validar una lista de correos:
+Validate a list of emails:
 ```bash
 python -m email_validator_tool.cli input.csv output.csv
 ```
 
-Habilitar verificación catch-all (fase 2):
+Enable catch-all verification (phase 2):
 ```bash
 python -m email_validator_tool.cli input.csv output.csv --enable-catch-all
 ```
 
-Habilitar verificación SMTP (fase 3):
+Enable SMTP verification (phase 3):
 ```bash
 python -m email_validator_tool.cli input.csv output.csv --enable-smtp
 ```
 
-## Capas de Validación
+## Validation Layers
 
-1. **Sintaxis (RFC)**
-   - Verifica que el correo cumple con la especificación RFC
-   - Usa email-validator para validación robusta
+1. **Syntax (RFC)**
+   - Verifies email complies with RFC specification
+   - Uses email-validator for robust validation
 
 2. **DNS/MX**
-   - Comprueba que el dominio existe
-   - Verifica que tiene registros MX válidos
-   - Usa dnspython para resolución DNS
+   - Checks domain existence
+   - Verifies valid MX records
+   - Uses dnspython for DNS resolution
 
-3. **Dominios Desechables**
-   - Detecta dominios de correo temporal
-   - Usa disposable-email-domains dataset
+3. **Disposable Domains**
+   - Detects temporary email domains
+   - Uses disposable-email-domains dataset
 
-4. **Cuentas de Rol**
-   - Identifica cuentas genéricas (admin, info, etc.)
-   - Usa email-role-detector y patrones personalizados
+4. **Role Accounts**
+   - Identifies generic accounts (admin, info, etc.)
+   - Uses email-role-detector and custom patterns
 
-5. **Lista de Rebotes**
-   - Verifica contra base de datos local de rebotes
-   - Almacena historial en SQLite
+5. **Bounce List**
+   - Verifies against local bounce database
+   - Stores history in SQLite
 
-6. **Catch-all** (Opcional)
-   - Detecta dominios que aceptan cualquier correo
-   - Requiere verificación SMTP
+6. **Catch-all** (Optional)
+   - Detects domains that accept any email
+   - Requires SMTP verification
 
-7. **SMTP** (Opcional)
-   - Verifica existencia real del buzón
-   - Requiere conexión directa al servidor
+7. **SMTP** (Optional)
+   - Verifies actual mailbox existence
+   - Requires direct server connection
 
-## Gestión de Riesgos
+## Risk Management
 
-⚠️ **Advertencia**: Las verificaciones SMTP y catch-all son consideradas de alto riesgo:
+⚠️ **Warning**: SMTP and catch-all verifications are considered high-risk:
 
-- Pueden resultar en el bloqueo de tu IP por los servidores de correo
-- Deben usarse con precaución y configuración adecuada
-- Recomendaciones:
-  - Usar delays entre verificaciones (PER_DOMAIN_DELAY_SECONDS)
-  - Limitar conexiones concurrentes (MAX_CONCURRENT_CONNECTIONS)
-  - Configurar timeouts apropiados (SMTP_TIMEOUT)
-  - Considerar usar un VPS dedicado
-  - Implementar rotación de IPs si es necesario
+- May result in IP blocking by mail servers
+- Should be used with caution and proper configuration
+- Recommendations:
+  - Use delays between verifications (PER_DOMAIN_DELAY_SECONDS)
+  - Limit concurrent connections (MAX_CONCURRENT_CONNECTIONS)
+  - Configure appropriate timeouts (SMTP_TIMEOUT)
+  - Consider using a dedicated VPS
+  - Implement IP rotation if necessary
 
-## Contribución
+## Contributing
 
-1. Fork el repositorio
-2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
-3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push a la rama (`git push origin feature/AmazingFeature`)
-5. Abre un Pull Request
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-## Licencia
+## License
 
-Este proyecto está licenciado bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

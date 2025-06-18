@@ -1,77 +1,79 @@
 import asyncio
+from typing import AsyncGenerator, List
 from loguru import logger
 from email_validator_tool.config import Settings
-from email_validator_tool.models import ValidationResult
-from email_validator_tool.validators import (
-    syntax,
-    dns_mx,
-    disposable,
-    role_account,
-    bounce_list,
-    catch_all,
-    smtp,
-)
+from email_validator_tool.core.models import ValidationResult, ValidationStatus
+from email_validator_tool.validators.syntax import SyntaxValidator
+from email_validator_tool.validators.dns_mx import DNSMXValidator
+from email_validator_tool.validators.disposable import DisposableValidator
+from email_validator_tool.validators.role_account import RoleAccountValidator
+from email_validator_tool.validators.bounce_list import BounceListValidator
+from email_validator_tool.validators.catch_all import CatchAllValidator
+from email_validator_tool.validators.smtp import SMTPValidator
 
 SETTINGS = Settings()
 
 class ValidationPipeline:
-    """Pipeline for validating email addresses."""
+    """Pipeline for email validation with multiple layers"""
     
     def __init__(self):
-        self.settings = Settings()
-    
-    async def process_email(self, email: str) -> ValidationResult:
-        """Process a single email through all enabled validation layers."""
-        # Run safe validations in order
-        validators = [
-            syntax,
-            dns_mx,
-            disposable,
-            role_account,
-            bounce_list,
+        """Initialize validators"""
+        self.validators = [
+            SyntaxValidator(),
+            DNSMXValidator(),
+            DisposableValidator(),
+            RoleAccountValidator(),
+            BounceListValidator(),
+            CatchAllValidator(),
+            SMTPValidator()
         ]
+    
+    async def run_pipeline(self, emails: List[str]) -> AsyncGenerator[ValidationResult, None]:
+        """
+        Run the validation pipeline on a list of emails.
         
-        for validator in validators:
-            result = await validator.check(email)
-            if result.status != "valid":
-                return result
+        Args:
+            emails: List of email addresses to validate
+            
+        Yields:
+            ValidationResult for each processed email
+        """
+        for email in emails:
+            try:
+                result = await self._process_email(email)
+                yield result
+            except Exception as e:
+                logger.error(f"Error processing email {email}: {str(e)}")
+                yield ValidationResult(
+                    email=email,
+                    status=ValidationStatus.UNKNOWN_ERROR,
+                    details={"error": str(e)}
+                )
+    
+    async def _process_email(self, email: str) -> ValidationResult:
+        """
+        Process a single email through all validation layers.
         
-        # Optional validations based on settings
-        if self.settings.ENABLE_CATCH_ALL:
-            result = await catch_all.check(email)
-            if result.status != "valid":
-                return result
-        
-        if self.settings.ENABLE_SMTP:
-            result = await smtp.check(email)
-            if result.status != "valid":
-                return result
+        Args:
+            email: Email address to validate
+            
+        Returns:
+            ValidationResult with the validation outcome
+        """
+        for validator in self.validators:
+            try:
+                result = await validator.validate(email)
+                if result.status != ValidationStatus.VALID:
+                    return result
+            except Exception as e:
+                logger.error(f"Error in {validator.__class__.__name__} for {email}: {str(e)}")
+                return ValidationResult(
+                    email=email,
+                    status=ValidationStatus.UNKNOWN_ERROR,
+                    details={"error": str(e)}
+                )
         
         return ValidationResult(
             email=email,
-            status="valid"
+            status=ValidationStatus.VALID
         )
-    
-    async def run_pipeline(self, email_list: list[str]):
-        """Run the validation pipeline on a list of emails with controlled concurrency."""
-        sem = asyncio.Semaphore(self.settings.MAX_CONCURRENT_CONNECTIONS)
-        
-        async def sem_task(email: str) -> ValidationResult:
-            async with sem:
-                return await self.process_email(email)
-        
-        # Create tasks for all emails
-        tasks = [sem_task(email) for email in email_list]
-        
-        # Process tasks as they complete
-        for coro in asyncio.as_completed(tasks):
-            try:
-                result = await coro
-                yield result
-            except Exception as e:
-                logger.error(f"Error processing email: {str(e)}")
-                yield ValidationResult(
-                    email=email,
-                    status="unknown_error",
-                    details=str(e)
-                )

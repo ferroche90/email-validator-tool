@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 class ValidationStatus(Enum):
+    """Validation status codes"""
     VALID = "valid"
     INVALID_SYNTAX = "invalid_syntax"
     INVALID_DOMAIN = "invalid_domain"
@@ -15,6 +16,7 @@ class ValidationStatus(Enum):
     UNKNOWN_ERROR = "unknown_error"
 
 class ValidationResult(BaseModel):
+    """Result of email validation"""
     email: str
     status: ValidationStatus
-    details: Optional[str] = None
+    details: Optional[str] = None 

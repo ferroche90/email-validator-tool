@@ -1,27 +1,29 @@
-email-validator
+# Core dependencies
+email-validator>=2.2.0
 
 # DNS and email domain utilities
-dnspython
-disposable-email-domains
+dnspython>=2.7.0
+disposable-email-domains>=0.0.126
 
 # CLI
-typer
+typer>=0.16.0
 
 # Async support
-asyncio
-aiosmtplib
+asyncio>=3.4.3
+aiosmtplib>=4.0.1
 
 # Logging
-loguru
+loguru>=0.7.3
 
 # Data validation
-pydantic
+pydantic>=2.10.0
+pydantic-settings>=2.0.0
 
 # Testing
-pytest
-pytest-asyncio
+pytest>=8.4.1
+pytest-asyncio>=1.0.0
 
 # Code style and formatting
-black
-isort
-flake8
+black>=25.1.0
+isort>=6.0.1
+flake8>=7.2.0

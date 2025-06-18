@@ -10,7 +10,7 @@ from email_validator_tool.core.results import generate_summary
 
 app = typer.Typer(
     name="email-validator",
-    help="Validador de correos electrónicos con múltiples capas de verificación",
+    help="Email validator with multiple verification layers",
     add_completion=False
 )
 
@@ -18,7 +18,7 @@ app = typer.Typer(
 def main(
     input_path: Path = typer.Argument(
         ...,
-        help="Ruta al archivo CSV con los correos a validar",
+        help="Path to CSV file with emails to validate",
         exists=True,
         file_okay=True,
         dir_okay=False,
@@ -26,7 +26,7 @@ def main(
     ),
     output_path: Path = typer.Argument(
         ...,
-        help="Ruta donde guardar el CSV con los resultados",
+        help="Path to save the CSV with results",
         file_okay=True,
         dir_okay=False,
         writable=True,
@@ -34,17 +34,17 @@ def main(
     enable_catch_all: bool = typer.Option(
         False,
         "--enable-catch-all",
-        help="Habilitar detección de catch-all (fase 2)",
+        help="Enable catch-all detection (phase 2)",
     ),
     enable_smtp: bool = typer.Option(
         False,
         "--enable-smtp",
-        help="Habilitar verificación SMTP (fase 3)",
+        help="Enable SMTP verification (phase 3)",
     ),
 ):
     """
-    Valida una lista de correos electrónicos aplicando múltiples capas de verificación.
-    Los resultados se guardan en un archivo CSV y se muestra un resumen estadístico.
+    Validate a list of email addresses applying multiple verification layers.
+    Results are saved to a CSV file and a statistical summary is displayed.
     """
     try:
         # Load configuration
@@ -55,11 +55,11 @@ def main(
             settings.ENABLE_SMTP = True
         
         # Load emails
-        logger.info(f"Cargando correos desde {input_path}")
+        logger.info(f"Loading emails from {input_path}")
         emails = EmailLoader.load_emails_from_csv(str(input_path))
         
         # Process emails and write results incrementally
-        logger.info(f"Procesando {len(emails)} correos...")
+        logger.info(f"Processing {len(emails)} emails...")
         processed_results = []
         
         async def process_and_write():
@@ -75,10 +75,10 @@ def main(
         # Generate summary
         generate_summary(processed_results)
         
-        logger.success(f"Proceso completado. Resultados guardados en {output_path}")
+        logger.success(f"Process completed. Results saved to {output_path}")
         
     except Exception as e:
-        logger.error(f"Error durante la validación: {str(e)}")
+        logger.error(f"Error during validation: {str(e)}")
         raise typer.Exit(1)
 
 if __name__ == "__main__":

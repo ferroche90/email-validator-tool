@@ -2,7 +2,7 @@ import csv
 from pathlib import Path
 from typing import List
 from loguru import logger
-from email_validator_tool.models import ValidationResult
+from email_validator_tool.core.models import ValidationResult
 
 class EmailLoader:
     """Loader for email addresses from CSV files."""

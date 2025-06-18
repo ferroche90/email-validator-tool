@@ -3,14 +3,72 @@ import time
 from typing import Dict
 import dns.resolver
 import aiosmtplib
+from email.mime.text import MIMEText
 from loguru import logger
-from email_validator_tool.models import ValidationResult, ValidationStatus
+from email_validator_tool.core.models import ValidationResult, ValidationStatus
 from email_validator_tool.config import Settings
 
 SETTINGS = Settings()
 
 # Keep track of last contact time per domain
 _last_contact: Dict[str, float] = {}
+
+class SMTPValidator:
+    """Validator for checking email deliverability via SMTP"""
+    
+    def __init__(self):
+        """Initialize the validator"""
+        self.settings = Settings()
+    
+    async def validate(self, email: str) -> ValidationResult:
+        """
+        Check if the email is deliverable via SMTP.
+        
+        Args:
+            email: Email address to validate
+            
+        Returns:
+            ValidationResult with the validation outcome
+        """
+        try:
+            domain = email.split('@')[1]
+            logger.debug(f"Checking SMTP deliverability for {email}")
+            
+            # Create test message
+            msg = MIMEText("This is a test message for email validation.")
+            msg['Subject'] = "Email Validation Test"
+            msg['From'] = "validator@example.com"
+            msg['To'] = email
+            
+            # Try to connect to SMTP server
+            try:
+                async with aiosmtplib.SMTP(
+                    hostname=domain,
+                    port=self.settings.SMTP_PORT,
+                    timeout=self.settings.SMTP_TIMEOUT
+                ) as smtp:
+                    # Send test message
+                    await smtp.send_message(msg)
+                    logger.info(f"Email {email} is deliverable via SMTP")
+                    return ValidationResult(
+                        email=email,
+                        status=ValidationStatus.VALID
+                    )
+            except Exception as e:
+                logger.warning(f"Email {email} is not deliverable via SMTP: {str(e)}")
+                return ValidationResult(
+                    email=email,
+                    status=ValidationStatus.INVALID_SMTP,
+                    details={"reason": f"SMTP error: {str(e)}"}
+                )
+                
+        except Exception as e:
+            logger.error(f"Error validating SMTP deliverability for {email}: {str(e)}")
+            return ValidationResult(
+                email=email,
+                status=ValidationStatus.UNKNOWN_ERROR,
+                details={"error": str(e)}
+            )
 
 async def check(email: str) -> ValidationResult:
     """

@@ -2,6 +2,9 @@
 Role account validator.
 """
 
+from loguru import logger
+from email_validator_tool.core.models import ValidationResult, ValidationStatus
+
 def is_role_account(email: str) -> bool:
     """Check if an email address is a role account."""
     common_roles = {
@@ -21,24 +24,49 @@ def is_role_account(email: str) -> bool:
     return local_part in common_roles
 
 class RoleAccountValidator:
-    """Validator for role accounts."""
+    """Validator for role-based email accounts"""
     
     def __init__(self):
-        self.name = "role_account"
+        """Initialize the validator"""
+        self.role_accounts = {
+            'admin', 'administrator', 'webmaster', 'hostmaster', 'postmaster',
+            'info', 'support', 'help', 'contact', 'sales', 'marketing',
+            'noreply', 'no-reply', 'donotreply', 'do-not-reply',
+            'abuse', 'security', 'spam', 'feedback', 'mailer-daemon'
+        }
     
-    async def validate(self, email: str, result) -> bool:
-        """Validate if an email is not a role account."""
-        if is_role_account(email):
-            result.add_validation_result(
-                self.name,
-                False,
-                "Email is a role account"
-            )
-            return False
+    async def validate(self, email: str) -> ValidationResult:
+        """
+        Check if the email is a role-based account.
         
-        result.add_validation_result(
-            self.name,
-            True,
-            None
-        )
-        return True
+        Args:
+            email: Email address to validate
+            
+        Returns:
+            ValidationResult with the validation outcome
+        """
+        try:
+            local_part = email.split('@')[0].lower()
+            logger.debug(f"Checking if {local_part} is a role account")
+            
+            if local_part in self.role_accounts:
+                logger.warning(f"Email {email} is a role account")
+                return ValidationResult(
+                    email=email,
+                    status=ValidationStatus.ROLE_ACCOUNT,
+                    details={"reason": f"Local part '{local_part}' is a role account"}
+                )
+            
+            logger.info(f"Email {email} is not a role account")
+            return ValidationResult(
+                email=email,
+                status=ValidationStatus.VALID
+            )
+            
+        except Exception as e:
+            logger.error(f"Error validating role account status for {email}: {str(e)}")
+            return ValidationResult(
+                email=email,
+                status=ValidationStatus.UNKNOWN_ERROR,
+                details={"error": str(e)}
+            )
