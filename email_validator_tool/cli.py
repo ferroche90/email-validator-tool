@@ -4,7 +4,9 @@ import typer
 from loguru import logger
 
 from email_validator_tool.config import Settings
-from email_validator_tool.core import loader, pipeline, results
+from email_validator_tool.core.loader import EmailLoader
+from email_validator_tool.core.pipeline import ValidationPipeline
+from email_validator_tool.core.results import generate_summary
 
 app = typer.Typer(
     name="email-validator",
@@ -54,23 +56,24 @@ def main(
         
         # Load emails
         logger.info(f"Cargando correos desde {input_path}")
-        emails = loader.load_emails_from_csv(str(input_path))
+        emails = EmailLoader.load_emails_from_csv(str(input_path))
         
         # Process emails and write results incrementally
         logger.info(f"Procesando {len(emails)} correos...")
         processed_results = []
         
         async def process_and_write():
+            pipeline = ValidationPipeline()
             async for result in pipeline.run_pipeline(emails):
                 processed_results.append(result)
                 # Write results incrementally
-                loader.write_results_to_csv(processed_results, str(output_path))
+                EmailLoader.write_results_to_csv(processed_results, str(output_path))
         
         # Run the pipeline
         asyncio.run(process_and_write())
         
         # Generate summary
-        results.generate_summary(processed_results)
+        generate_summary(processed_results)
         
         logger.success(f"Proceso completado. Resultados guardados en {output_path}")
         
