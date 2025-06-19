@@ -8,7 +8,6 @@ A professional command-line tool for validating email addresses through multiple
 - **email-validator**: RFC syntax validation
 - **dnspython**: MX records verification
 - **disposable-email-domains**: Disposable domain detection
-- **email-role-detector**: Role account detection
 - **aiosmtplib**: Asynchronous SMTP verification
 - **Typer**: Command-line interface
 - **Pydantic**: Data validation and configuration
@@ -91,7 +90,7 @@ python -m email_validator_tool.cli input.csv output.csv --enable-smtp
 
 4. **Role Accounts**
    - Identifies generic accounts (admin, info, etc.)
-   - Uses email-role-detector and custom patterns
+   - Uses custom patterns and common role account names
 
 5. **Bounce List**
    - Verifies against local bounce database
@@ -128,4 +127,4 @@ python -m email_validator_tool.cli input.csv output.csv --enable-smtp
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is proprietary software. All rights reserved. See the [LICENSE](LICENSE) file for details.
