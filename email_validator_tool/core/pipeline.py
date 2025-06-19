@@ -17,16 +17,21 @@ class ValidationPipeline:
     """Pipeline for email validation with multiple layers"""
     
     def __init__(self):
-        """Initialize validators"""
+        """Initialize validators based on settings"""
         self.validators = [
             SyntaxValidator(),
             DNSMXValidator(),
             DisposableValidator(),
             RoleAccountValidator(),
             BounceListValidator(),
-            CatchAllValidator(),
-            SMTPValidator()
         ]
+        
+        # Add optional validators based on settings
+        if SETTINGS.ENABLE_CATCH_ALL:
+            self.validators.append(CatchAllValidator())
+        
+        if SETTINGS.ENABLE_SMTP:
+            self.validators.append(SMTPValidator())
     
     async def run_pipeline(self, emails: List[str]) -> AsyncGenerator[ValidationResult, None]:
         """
