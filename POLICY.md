@@ -1,80 +1,80 @@
-# Política de Privacidad y Cumplimiento Legal
+# Privacy Policy and Legal Compliance
 
-## Propósito de la Herramienta
+## Tool Purpose
 
-Email Validator Tool está diseñado exclusivamente para:
-- Limpiar y validar listas de correo electrónico propias
-- Verificar la validez de direcciones de correo con consentimiento previo (opt-in)
-- Mejorar la calidad de las comunicaciones por correo electrónico
-- Reducir las tasas de rebote en campañas legítimas
+Email Validator Tool is designed exclusively for:
+- Cleaning and validating your own email lists
+- Verifying the validity of email addresses with prior consent (opt-in)
+- Improving the quality of email communications
+- Reducing bounce rates in legitimate campaigns
 
-La herramienta NO está diseñada para:
-- Recolectar direcciones de correo sin consentimiento
-- Validar listas de correo compradas o adquiridas de terceros
-- Realizar envíos masivos sin permiso
-- Evadir filtros anti-spam
+The tool is NOT designed for:
+- Collecting email addresses without consent
+- Validating purchased or third-party acquired email lists
+- Performing mass mailings without permission
+- Evading anti-spam filters
 
-## Manejo de Datos
+## Data Handling
 
-### Procesamiento Local
-- Todos los correos electrónicos se procesan localmente en tu máquina
-- No se envían datos a servidores externos (excepto para verificación SMTP)
-- No se almacenan correos en bases de datos remotas
-- No se comparten datos con terceros
+### Local Processing
+- All emails are processed locally on your machine
+- No data is sent to external servers (except for SMTP verification)
+- No emails are stored in remote databases
+- No data is shared with third parties
 
-### Almacenamiento
-- La lista de rebotes se almacena localmente en SQLite
-- Los resultados de validación se guardan en CSV local
-- No se mantienen logs de correos procesados
-- Los correos se procesan en memoria y se descartan después de la validación
+### Storage
+- The bounce list is stored locally in SQLite
+- Validation results are saved in local CSV
+- No logs of processed emails are maintained
+- Emails are processed in memory and discarded after validation
 
-### Seguridad
-- No se requiere API key ni credenciales externas
-- Las conexiones SMTP son temporales y no persistentes
-- No se almacenan contraseñas ni datos sensibles
-- Se recomienda ejecutar en un entorno seguro
+### Security
+- No API key or external credentials required
+- SMTP connections are temporary and non-persistent
+- No passwords or sensitive data are stored
+- It is recommended to run in a secure environment
 
-## Cumplimiento Legal
+## Legal Compliance
 
-### Responsabilidad del Usuario
-Esta herramienta es un medio técnico para validar correos electrónicos. La responsabilidad del cumplimiento legal recae en el usuario, quien debe:
+### User Responsibility
+This tool is a technical means for validating email addresses. The responsibility for legal compliance lies with the user, who must:
 
-1. Asegurarse de tener permiso para contactar cada dirección de correo
-2. Mantener registros de consentimiento (opt-in)
-3. Respetar las leyes anti-spam aplicables
-4. Implementar procedimientos de opt-out
-5. Cumplir con los plazos de retención de datos
+1. Ensure they have permission to contact each email address
+2. Maintain consent records (opt-in)
+3. Respect applicable anti-spam laws
+4. Implement opt-out procedures
+5. Comply with data retention periods
 
-### CAN-SPAM Act (EE.UU.)
-- Proporcionar información de contacto precisa
-- Incluir opción de cancelación de suscripción
-- Honorar las solicitudes de opt-out dentro de 10 días
-- No usar información engañosa en el asunto
-- Incluir dirección física del remitente
+### CAN-SPAM Act (USA)
+- Provide accurate contact information
+- Include unsubscribe option
+- Honor opt-out requests within 10 days
+- Do not use misleading information in the subject
+- Include sender's physical address
 
-### RGPD (UE)
-- Obtener consentimiento explícito
-- Proporcionar información clara sobre el uso de datos
-- Permitir el acceso y la portabilidad de datos
-- Implementar el derecho al olvido
-- Mantener registros de consentimiento
+### GDPR (EU)
+- Obtain explicit consent
+- Provide clear information about data usage
+- Allow data access and portability
+- Implement the right to be forgotten
+- Maintain consent records
 
-### Recomendaciones
-1. Documentar el origen de cada lista de correo
-2. Mantener registros de consentimiento
-3. Implementar procedimientos de opt-out
-4. Revisar regularmente las políticas de privacidad
-5. Consultar con asesoría legal si es necesario
+### Recommendations
+1. Document the origin of each email list
+2. Maintain consent records
+3. Implement opt-out procedures
+4. Regularly review privacy policies
+5. Consult with legal counsel if necessary
 
-## Limitación de Responsabilidad
+## Limitation of Liability
 
-El desarrollador de esta herramienta:
-- No se hace responsable del uso indebido
-- No garantiza el cumplimiento legal automático
-- Recomienda consultar con asesoría legal
-- No proporciona asesoramiento legal
+The developer of this tool:
+- Is not responsible for misuse
+- Does not guarantee automatic legal compliance
+- Recommends consulting with legal counsel
+- Does not provide legal advice
 
-## Contacto
+## Contact
 
-Para preguntas sobre privacidad o cumplimiento legal, contacta a:
-[Tu información de contacto] 
+For questions about privacy or legal compliance, contact:
+[Your contact information] 
