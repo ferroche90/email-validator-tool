@@ -99,7 +99,6 @@ celerybeat.pid
 
 # Environments
 .env
-.env.*
 .venv/
 venv/
 env/
@@ -130,4 +129,4 @@ venv.bak/
 cython_debug/
 
 # Application-generated files
-results.csv
+*.csv

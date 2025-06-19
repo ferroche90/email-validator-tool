@@ -57,7 +57,7 @@ class EmailLoader:
             with open(file_path, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 # Write header
-                writer.writerow(['email', 'status', 'details'])
+                writer.writerow(['Email', 'Status', 'Details'])
                 # Write results
                 for result in results:
                     writer.writerow([
