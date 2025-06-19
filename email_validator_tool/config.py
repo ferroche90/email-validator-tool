@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import Optional
 
 class Settings(BaseSettings):
     """Configuration settings for the email validator"""
@@ -28,7 +29,41 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = True
 
+# Global settings instance
+_settings_instance: Optional[Settings] = None
+
 @lru_cache()
 def get_settings() -> Settings:
     """Get cached settings instance"""
-    return Settings()
+    global _settings_instance
+    if _settings_instance is None:
+        _settings_instance = Settings()
+    return _settings_instance
+
+def update_settings(enable_catch_all: Optional[bool] = None, enable_smtp: Optional[bool] = None) -> Settings:
+    """
+    Update settings dynamically and return the updated instance.
+    This clears the cache to ensure fresh settings are used.
+    
+    Args:
+        enable_catch_all: Optional value to set for ENABLE_CATCH_ALL
+        enable_smtp: Optional value to set for ENABLE_SMTP
+        
+    Returns:
+        Updated Settings instance
+    """
+    global _settings_instance
+    
+    # Clear the cache to force recreation
+    get_settings.cache_clear()
+    
+    # Create new settings instance
+    _settings_instance = Settings()
+    
+    # Apply updates if provided
+    if enable_catch_all is not None:
+        _settings_instance.ENABLE_CATCH_ALL = enable_catch_all
+    if enable_smtp is not None:
+        _settings_instance.ENABLE_SMTP = enable_smtp
+    
+    return _settings_instance

@@ -6,9 +6,7 @@ import aiosmtplib
 from email.mime.text import MIMEText
 from loguru import logger
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
-from email_validator_tool.config import Settings
-
-SETTINGS = Settings()
+from email_validator_tool.config import get_settings
 
 # Keep track of last contact time per domain
 _last_contact: Dict[str, float] = {}
@@ -18,7 +16,7 @@ class SMTPValidator:
     
     def __init__(self):
         """Initialize the validator"""
-        self.settings = Settings()
+        self.settings = get_settings()
     
     async def validate(self, email: str) -> ValidationResult:
         """

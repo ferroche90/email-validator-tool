@@ -3,7 +3,7 @@ from pathlib import Path
 import typer
 from loguru import logger
 
-from email_validator_tool.config import Settings
+from email_validator_tool.config import update_settings
 from email_validator_tool.core.loader import EmailLoader
 from email_validator_tool.core.pipeline import ValidationPipeline
 from email_validator_tool.core.results import generate_summary
@@ -47,12 +47,13 @@ def main(
     Results are saved to a CSV file and a statistical summary is displayed.
     """
     try:
-        # Load configuration
-        settings = Settings()
-        if enable_catch_all:
-            settings.ENABLE_CATCH_ALL = True
-        if enable_smtp:
-            settings.ENABLE_SMTP = True
+        # Update global configuration based on CLI options
+        settings = update_settings(
+            enable_catch_all=enable_catch_all if enable_catch_all else None,
+            enable_smtp=enable_smtp if enable_smtp else None
+        )
+        
+        logger.info(f"Configuration: ENABLE_CATCH_ALL={settings.ENABLE_CATCH_ALL}, ENABLE_SMTP={settings.ENABLE_SMTP}")
         
         # Load emails
         logger.info(f"Loading emails from {input_path}")

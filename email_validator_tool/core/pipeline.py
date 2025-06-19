@@ -1,7 +1,7 @@
 import asyncio
 from typing import AsyncGenerator, List
 from loguru import logger
-from email_validator_tool.config import Settings
+from email_validator_tool.config import get_settings
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
 from email_validator_tool.validators.syntax import SyntaxValidator
 from email_validator_tool.validators.dns_mx import DNSMXValidator
@@ -11,13 +11,14 @@ from email_validator_tool.validators.bounce_list import BounceListValidator
 from email_validator_tool.validators.catch_all import CatchAllValidator
 from email_validator_tool.validators.smtp import SMTPValidator
 
-SETTINGS = Settings()
-
 class ValidationPipeline:
     """Pipeline for email validation with multiple layers"""
     
     def __init__(self):
         """Initialize validators based on settings"""
+        # Get settings from centralized configuration
+        settings = get_settings()
+        
         self.validators = [
             SyntaxValidator(),
             DNSMXValidator(),
@@ -27,10 +28,10 @@ class ValidationPipeline:
         ]
         
         # Add optional validators based on settings
-        if SETTINGS.ENABLE_CATCH_ALL:
+        if settings.ENABLE_CATCH_ALL:
             self.validators.append(CatchAllValidator())
         
-        if SETTINGS.ENABLE_SMTP:
+        if settings.ENABLE_SMTP:
             self.validators.append(SMTPValidator())
     
     async def run_pipeline(self, emails: List[str]) -> AsyncGenerator[ValidationResult, None]:
