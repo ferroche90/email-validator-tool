@@ -76,5 +76,4 @@ The developer of this tool:
 
 ## Contact
 
-For questions about privacy or legal compliance, contact:
-[Your contact information] 
+For questions about privacy or legal compliance, contact: fernando@webatix.com
