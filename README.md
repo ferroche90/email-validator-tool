@@ -127,4 +127,4 @@ python -m email_validator_tool.cli input.csv output.csv --enable-smtp
 
 ## License
 
-This project is proprietary software. All rights reserved. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
