@@ -20,7 +20,7 @@ A professional command-line tool for validating email addresses through multiple
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/email-validator-tool.git
+   git clone https://github.com/ferroche90/email-validator-tool.git
    cd email-validator-tool
    ```
 
