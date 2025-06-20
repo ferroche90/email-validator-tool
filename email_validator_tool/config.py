@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     
     # Concurrency and timeouts
     PER_DOMAIN_DELAY_SECONDS: float = 5.0
+    
+    # DNS Cache settings
+    ENABLE_DNS_CACHE: bool = True
+    DNS_CACHE_TTL_SECONDS: int = 3600  # 1 hour default
 
     class Config:
         env_file = ".env"

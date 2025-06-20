@@ -1,6 +1,7 @@
 import sqlite3
 import asyncio
 from pathlib import Path
+from typing import Set
 from loguru import logger
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
 
@@ -22,22 +23,30 @@ def setup_database():
     except sqlite3.Error as e:
         logger.critical(f"Failed to set up SQLite database: {e}")
 
-# --- Database check function (blocking) ---
-def _check_email_in_db(email: str) -> bool:
+def load_bounce_list() -> Set[str]:
     """
-    Checks if a single email exists in the SQLite database.
-    This is a synchronous, blocking function.
+    Load all bounce emails from the database into a Python set.
+    
+    Returns:
+        Set containing all bounce emails
     """
-    conn = None # Ensure conn is defined
+    bounce_set = set()
+    conn = None
     try:
-        conn = sqlite3.connect(DB_PATH, timeout=5)
+        conn = sqlite3.connect(DB_PATH, timeout=10)
         cursor = conn.cursor()
-        cursor.execute("SELECT 1 FROM bounces WHERE email = ?", (email,))
-        result = cursor.fetchone()
-        return result is not None
+        cursor.execute("SELECT email FROM bounces")
+        rows = cursor.fetchall()
+        
+        for row in rows:
+            bounce_set.add(row[0])
+        
+        logger.info(f"Loaded {len(bounce_set)} bounce emails into memory")
+        return bounce_set
+        
     except sqlite3.Error as e:
-        logger.error(f"Database error while checking {email}: {e}")
-        return False # Assume not on list if DB fails
+        logger.error(f"Failed to load bounce list from database: {e}")
+        return set()
     finally:
         if conn:
             conn.close()
@@ -45,11 +54,36 @@ def _check_email_in_db(email: str) -> bool:
 class BounceListValidator:
     """
     Validator for checking if an email is in a local SQLite bounce list.
+    Optimized to load the entire bounce list into memory for fast lookups.
     """
+
+    def __init__(self):
+        """Initialize the validator by loading the bounce list into memory."""
+        self.bounce_set = load_bounce_list()
+        logger.info(f"BounceListValidator initialized with {len(self.bounce_set)} emails in memory")
+
+    def reload_bounce_list(self) -> int:
+        """
+        Reload the bounce list from the database.
+        
+        Returns:
+            Number of bounce emails loaded
+        """
+        self.bounce_set = load_bounce_list()
+        return len(self.bounce_set)
+
+    def get_bounce_count(self) -> int:
+        """
+        Get the current number of bounce emails in memory.
+        
+        Returns:
+            Number of bounce emails
+        """
+        return len(self.bounce_set)
 
     async def validate(self, email: str) -> ValidationResult:
         """
-        Check if the email is in the local bounce list database.
+        Check if the email is in the in-memory bounce list.
 
         Args:
             email: Email address to validate.
@@ -58,17 +92,15 @@ class BounceListValidator:
             ValidationResult with the validation outcome.
         """
         try:
-            logger.debug(f"Checking local bounce list for {email}.")
+            logger.debug(f"Checking in-memory bounce list for {email}.")
 
-            # Run the synchronous DB check in a separate thread to avoid blocking asyncio
-            is_bounced = await asyncio.to_thread(_check_email_in_db, email)
-
-            if is_bounced:
-                logger.warning(f"Email {email} found in local bounce list.")
+            # Simple synchronous set lookup - no I/O operations
+            if email in self.bounce_set:
+                logger.warning(f"Email {email} found in bounce list.")
                 return ValidationResult(
                     email=email,
                     status=ValidationStatus.ON_BOUNCE_LIST,
-                    details="Email is on the local bounce list."
+                    details="Email is on the bounce list."
                 )
 
             return ValidationResult(

@@ -1,10 +1,80 @@
 import dns.resolver
+import time
+from typing import Dict, Tuple, Optional
 from email_validator import validate_email, EmailNotValidError
 from loguru import logger
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
 
 class DNSMXValidator:
-    """Validator for DNS MX records"""
+    """Validator for DNS MX records with caching support"""
+    
+    def __init__(self, cache_ttl_seconds: int = 3600):
+        """
+        Initialize DNS MX validator with caching
+        
+        Args:
+            cache_ttl_seconds: Time to live for cached results in seconds (default: 1 hour)
+        """
+        self.mx_cache: Dict[str, Tuple[ValidationResult, float]] = {}
+        self.cache_ttl_seconds = cache_ttl_seconds
+        logger.info(f"DNS MX Validator initialized with cache TTL: {cache_ttl_seconds} seconds")
+    
+    def clear_cache(self) -> int:
+        """
+        Clear the DNS cache and return the number of entries removed
+        
+        Returns:
+            Number of cache entries removed
+        """
+        cache_size = len(self.mx_cache)
+        self.mx_cache.clear()
+        logger.info(f"DNS cache cleared. Removed {cache_size} entries")
+        return cache_size
+    
+    def get_cache_stats(self) -> Dict[str, int]:
+        """
+        Get cache statistics
+        
+        Returns:
+            Dictionary with cache statistics
+        """
+        current_time = time.time()
+        valid_entries = 0
+        expired_entries = 0
+        
+        for domain, (_, timestamp) in self.mx_cache.items():
+            if current_time - timestamp < self.cache_ttl_seconds:
+                valid_entries += 1
+            else:
+                expired_entries += 1
+        
+        return {
+            "total_entries": len(self.mx_cache),
+            "valid_entries": valid_entries,
+            "expired_entries": expired_entries,
+            "cache_ttl_seconds": self.cache_ttl_seconds
+        }
+    
+    def _cleanup_expired_cache(self) -> int:
+        """
+        Remove expired entries from cache
+        
+        Returns:
+            Number of expired entries removed
+        """
+        current_time = time.time()
+        expired_domains = [
+            domain for domain, (_, timestamp) in self.mx_cache.items()
+            if current_time - timestamp >= self.cache_ttl_seconds
+        ]
+        
+        for domain in expired_domains:
+            del self.mx_cache[domain]
+        
+        if expired_domains:
+            logger.debug(f"Cleaned up {len(expired_domains)} expired cache entries")
+        
+        return len(expired_domains)
     
     async def validate(self, email: str) -> ValidationResult:
         try:
@@ -12,34 +82,72 @@ class DNSMXValidator:
             domain = email.split('@')[1]
             logger.debug(f"Checking MX records for domain: {domain}")
             
-            # Query MX records
+            # Check cache first
+            if domain in self.mx_cache:
+                cached_result, timestamp = self.mx_cache[domain]
+                current_time = time.time()
+                
+                # Check if cache entry is still valid
+                if current_time - timestamp < self.cache_ttl_seconds:
+                    logger.debug(f"Using cached MX result for domain: {domain}")
+                    # Return cached result but update the email field
+                    return ValidationResult(
+                        email=email,
+                        status=cached_result.status,
+                        details=cached_result.details
+                    )
+                else:
+                    # Remove expired cache entry
+                    del self.mx_cache[domain]
+                    logger.debug(f"Removed expired cache entry for domain: {domain}")
+            
+            # Perform DNS query
             mx_records = dns.resolver.resolve(domain, 'MX')
             
             if mx_records:
                 logger.info(f"Found {len(mx_records)} MX records for {domain}")
-                return ValidationResult(
+                result = ValidationResult(
                     email=email,
                     status=ValidationStatus.VALID
                 )
+                # Cache the successful result
+                self.mx_cache[domain] = (result, time.time())
+                return result
                 
         except dns.resolver.NXDOMAIN:
             logger.warning(f"Domain {domain} does not exist")
-            return ValidationResult(
+            result = ValidationResult(
                 email=email,
                 status=ValidationStatus.INVALID_DOMAIN,
                 details=f"Domain {domain} does not exist"
             )
+            # Cache the domain error result
+            self.mx_cache[domain] = (result, time.time())
+            return result
+            
         except dns.resolver.NoAnswer:
             logger.warning(f"No MX records found for domain {domain}")
-            return ValidationResult(
+            result = ValidationResult(
                 email=email,
                 status=ValidationStatus.INVALID_MX,
                 details=f"No MX records found for domain {domain}"
             )
+            # Cache the MX error result
+            self.mx_cache[domain] = (result, time.time())
+            return result
+            
         except Exception as exc:
             logger.error(f"DNS error for {email}: {exc}")
-            return ValidationResult(
+            result = ValidationResult(
                 email=email,
                 status=ValidationStatus.UNKNOWN_ERROR,
                 details=f"DNS error: {str(exc)}"
             )
+            # Cache the error result
+            self.mx_cache[domain] = (result, time.time())
+            return result
+        
+        finally:
+            # Periodically cleanup expired cache entries (every 100 queries)
+            if len(self.mx_cache) % 100 == 0:
+                self._cleanup_expired_cache()
