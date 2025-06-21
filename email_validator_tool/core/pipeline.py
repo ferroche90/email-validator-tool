@@ -1,5 +1,5 @@
 import asyncio
-from typing import AsyncGenerator, List
+from typing import AsyncGenerator, List, Optional
 from loguru import logger
 from email_validator_tool.config import get_settings
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
@@ -14,37 +14,59 @@ from email_validator_tool.validators.smtp import SMTPValidator
 class ValidationPipeline:
     """Pipeline for email validation with multiple layers"""
     
-    def __init__(self):
-        """Initialize validators based on settings"""
-        # Get settings from centralized configuration
+    def __init__(
+        self,
+        dns_validator: Optional[DNSMXValidator] = None,
+        bounce_validator: Optional[BounceListValidator] = None,
+        enable_smtp: bool = False,
+        enable_catch_all: bool = False,
+        max_concurrent_connections: Optional[int] = None
+    ):
+        """
+        Initialize validators with dependency injection support.
+        
+        Args:
+            dns_validator: Optional DNS validator instance. If None, creates new one.
+            bounce_validator: Optional bounce list validator instance. If None, creates new one.
+            enable_smtp: Whether to enable SMTP validation
+            enable_catch_all: Whether to enable catch-all detection
+            max_concurrent_connections: Max concurrent connections for validation
+        """
+        # Get settings for defaults
         settings = get_settings()
         
-        # Initialize DNS validator with cache configuration
-        dns_validator = DNSMXValidator(
-            cache_ttl_seconds=settings.DNS_CACHE_TTL_SECONDS if settings.ENABLE_DNS_CACHE else 0
-        )
+        # Initialize or use provided DNS validator
+        if dns_validator is None:
+            self.dns_validator = DNSMXValidator(
+                cache_ttl_seconds=settings.DNS_CACHE_TTL_SECONDS if settings.ENABLE_DNS_CACHE else 0
+            )
+        else:
+            self.dns_validator = dns_validator
         
-        # Initialize bounce list validator
-        bounce_validator = BounceListValidator()
+        # Initialize or use provided bounce validator
+        if bounce_validator is None:
+            self.bounce_validator = BounceListValidator()
+        else:
+            self.bounce_validator = bounce_validator
         
+        # Build validators list
         self.validators = [
             SyntaxValidator(),
-            dns_validator,
+            self.dns_validator,
             DisposableValidator(),
             RoleAccountValidator(),
-            bounce_validator,
+            self.bounce_validator,
         ]
         
-        # Add optional validators based on settings
-        if settings.ENABLE_CATCH_ALL:
+        # Add optional validators based on constructor parameters
+        if enable_catch_all:
             self.validators.append(CatchAllValidator())
         
-        if settings.ENABLE_SMTP:
+        if enable_smtp:
             self.validators.append(SMTPValidator())
         
-        # Store validator references for management
-        self.dns_validator = dns_validator
-        self.bounce_validator = bounce_validator
+        # Store configuration
+        self.max_concurrent_connections = max_concurrent_connections or settings.MAX_CONCURRENT_CONNECTIONS
     
     def clear_dns_cache(self) -> int:
         """
@@ -104,9 +126,7 @@ class ValidationPipeline:
         Yields:
             ValidationResult for each processed email as they complete
         """
-        # Get settings for concurrency control
-        settings = get_settings()
-        sem = asyncio.Semaphore(settings.MAX_CONCURRENT_CONNECTIONS)
+        sem = asyncio.Semaphore(self.max_concurrent_connections)
         
         async def process_with_semaphore(email: str) -> ValidationResult:
             """Process a single email with semaphore control for concurrency limiting"""

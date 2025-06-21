@@ -1,9 +1,14 @@
 # Makefile for email-validator-tool
 
-.PHONY: help lint format test install setup-dev v vca vsmtp vfull cache-stats clear-cache cleanup-cache reload-bounce bounce-stats
+.PHONY: help lint format test install setup-dev v vca vsmtp vfull cache-stats clear-cache cleanup-cache reload-bounce bounce-stats dev build test
 
 help:
 	@echo Email Validator Tool - Makefile Shortcuts
+	@echo.
+	@echo Development Commands:
+	@echo   make dev                              - Start frontend + backend concurrently
+	@echo   make build                            - Build Docker containers
+	@echo   make test                             - Run backend tests
 	@echo.
 	@echo Validation Commands:
 	@echo   make v ARGS='input.csv output.csv'          - Basic validation
@@ -28,6 +33,7 @@ help:
 	@echo   make install                                - Install dependencies
 	@echo.
 	@echo Examples:
+	@echo   make dev
 	@echo   make v ARGS='emails.csv results.csv'
 	@echo   make vca ARGS='emails.csv results.csv'
 	@echo   make cache-stats
@@ -55,6 +61,23 @@ test:
 install:
 	python -m venv venv
 	. venv/bin/activate && pip install -r requirements.txt
+
+# Development and deployment
+dev:
+	@echo Starting development servers...
+	@echo Frontend: http://localhost:5173
+	@echo Backend:  http://localhost:8000
+	@echo.
+	@echo Press Ctrl+C to stop both servers
+	@pnpm --filter frontend dev & cd backend && uvicorn app.main:app --reload
+
+build:
+	@echo Building Docker containers...
+	docker compose build
+
+test:
+	@echo Running backend tests...
+	pytest -q backend/tests
 
 # Main validation commands (shortcuts)
 v:

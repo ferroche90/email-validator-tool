@@ -1,0 +1,42 @@
+{
+    # Global options
+    admin off
+    auto_https disable_redirects
+}
+
+# Main site configuration
+:80 {
+    # Reverse proxy to API
+    reverse_proxy api:8000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Logging
+    log {
+        output stdout
+        format console
+    }
+}
+
+# HTTPS configuration (if domain is provided)
+:443 {
+    # Reverse proxy to API
+    reverse_proxy api:8000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Automatic HTTPS
+    tls internal
+
+    # Logging
+    log {
+        output stdout
+        format console
+    }
+} 

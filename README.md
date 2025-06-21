@@ -58,6 +58,67 @@ A professional command-line tool for validating email addresses through multiple
    DNS_CACHE_TTL_SECONDS=3600
    ```
 
+## Deployment on Render
+
+This project includes a complete web application with FastAPI backend and React frontend that can be deployed to Render's free tier.
+
+### Prerequisites
+
+- GitHub repository with the project code
+- Render account (free tier available)
+
+### Deployment Steps
+
+1. **Create Web Service from Repository**
+   - Go to [render.com](https://render.com) and create an account
+   - Click "New +" and select "Web Service"
+   - Connect your GitHub repository
+   - Render will automatically detect the `render.yaml` configuration file
+
+2. **Add Environment Variables**
+   - The following variables are automatically configured:
+     - `API_TOKEN`: Auto-generated secure token for API authentication
+     - `ADMIN_TOKEN`: Auto-generated secure token for admin endpoints
+     - `DATABASE_URL`: SQLite database for bounce list storage
+     - `LOG_LEVEL`: Set to INFO for production logging
+     - `CORS_ORIGINS`: Allows all origins for frontend integration
+     - `RATE_LIMIT_PER_MINUTE`: 60 requests per minute (free tier limit)
+
+3. **Deploy and Verify**
+   - Click "Create Web Service"
+   - Render will build and deploy your application
+   - Monitor the build logs for any issues
+   - Once deployed, verify the health endpoint: `https://<subdomain>.onrender.com/health`
+
+4. **Access the Application**
+   - **API Endpoints**: Available at `https://<subdomain>.onrender.com/api/`
+   - **Frontend SPA**: Available at the same URL root `https://<subdomain>.onrender.com/`
+   - **Health Check**: `https://<subdomain>.onrender.com/health`
+   - **API Documentation**: `https://<subdomain>.onrender.com/docs`
+
+### Free Tier Features
+
+- ✅ **No cost** - Completely free deployment
+- ✅ **HTTPS included** - Automatic SSL certificates
+- ✅ **Custom domains** - Can add your own domain
+- ✅ **Auto-scaling** - Handles traffic spikes
+- ✅ **Logs & monitoring** - Built-in observability
+
+### API Usage
+
+Once deployed, you can use the API with the generated `API_TOKEN`:
+
+```bash
+curl -X POST "https://<subdomain>.onrender.com/api/validate" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "emails": ["test@example.com", "invalid@email"],
+    "enable_smtp": false,
+    "enable_catch_all": false
+  }'
+```
+
 ## Usage
 
 The tool provides several commands for email validation and system management:

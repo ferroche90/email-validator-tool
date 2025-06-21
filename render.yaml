@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: email-validator-api
+    env: docker
+    repo: https://github.com/yourusername/email-validator-tool
+    branch: main
+    plan: free
+    region: oregon
+    dockerCommand: ['docker', 'compose', 'up', '-d', '--build']
+    envVars:
+      - key: API_TOKEN
+        generateValue: true
+      - key: DATABASE_URL
+        value: sqlite:///app.db
+      - key: LOG_LEVEL
+        value: INFO
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "60"
+      - key: ADMIN_TOKEN
+        generateValue: true
+    healthCheckPath: /health
+    autoDeploy: true 

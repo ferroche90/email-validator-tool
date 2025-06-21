@@ -73,7 +73,10 @@ def validate(
         processed_results = []
         
         async def process_and_write():
-            pipeline = ValidationPipeline()
+            pipeline = ValidationPipeline(
+                enable_smtp=settings.ENABLE_SMTP,
+                enable_catch_all=settings.ENABLE_CATCH_ALL
+            )
             processed_count = 0
             async for result in pipeline.run_pipeline(emails):
                 processed_results.append(result)

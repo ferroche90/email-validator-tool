@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  api:
+    build: ./backend
+    environment:
+      - API_TOKEN=${API_TOKEN}
+    volumes:
+      - ./backend/bounce_list.db:/app/bounce_list.db
+    networks:
+      - app-network
+
+  caddy:
+    image: caddy:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+    networks:
+      - app-network
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  app-network:
+    driver: bridge 
