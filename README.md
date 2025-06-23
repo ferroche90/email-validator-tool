@@ -1,286 +1,490 @@
 # Email Validator Tool
 
-A professional command-line tool for validating email addresses through multiple verification layers, including syntax, DNS/MX, disposable domains, role accounts, bounce list, and optionally, catch-all detection and SMTP verification.
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=flat-square&logo=github)](https://github.com/ferroche90/email-validator-tool.git)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.8+-blue?style=flat-square&logo=python)](https://python.org)
+[![React](https://img.shields.io/badge/React-19.1+-blue?style=flat-square&logo=react)](https://reactjs.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
 
-## Technology Stack
+A comprehensive, production-ready email validation tool with multiple verification layers, featuring both a command-line interface and a modern web application. This tool provides robust email validation through syntax checking, DNS/MX verification, disposable domain detection, role account identification, bounce list checking, and optional SMTP verification and catch-all detection.
 
-- **Python 3.8+**: Base language
-- **email-validator**: RFC syntax validation
-- **dnspython**: MX records verification
+## 🌟 Features
+
+### Core Validation Layers
+- **📧 Syntax Validation**: RFC-compliant email format verification
+- **🌐 DNS/MX Verification**: Domain existence and mail server validation
+- **🗑️ Disposable Domain Detection**: Identifies temporary email services
+- **👤 Role Account Detection**: Flags generic accounts (admin, info, etc.)
+- **📋 Bounce List Checking**: Validates against local bounce database
+- **🎯 Catch-all Detection**: Identifies domains that accept any email (optional)
+- **📬 SMTP Verification**: Direct mailbox existence verification (optional)
+
+### Application Modes
+- **🖥️ Command Line Interface**: Batch processing with CSV input/output
+- **🌐 Web Application**: Modern React frontend with FastAPI backend
+- **🔌 REST API**: Programmatic access with rate limiting and authentication
+- **🐳 Docker Support**: Containerized deployment with Caddy reverse proxy
+
+### Performance Features
+- **⚡ Asynchronous Processing**: High-performance concurrent validation
+- **💾 DNS Caching**: Intelligent caching to reduce network requests
+- **📊 Incremental Processing**: Real-time CSV writing for large datasets
+- **🔄 Rate Limiting**: Configurable limits to prevent server blocking
+
+## 🏗️ Architecture
+
+### Project Structure
+```
+email-validator-tool/
+├── 📁 email_validator_tool/     # Core CLI package
+│   ├── cli.py                   # Command-line interface
+│   ├── config.py                # Configuration management
+│   ├── core/                    # Core validation logic
+│   ├── validators/              # Individual validators
+│   └── logger.py                # Logging configuration
+├── 📁 backend/                  # FastAPI web service
+│   ├── app/                     # FastAPI application
+│   ├── requirements.txt         # Python dependencies
+│   └── Dockerfile               # Backend container
+├── 📁 frontend/                 # React web application
+│   ├── src/                     # React source code
+│   ├── package.json             # Node.js dependencies
+│   └── vite.config.ts           # Build configuration
+├── 📁 tests/                    # Test suite
+├── docker-compose.yml           # Multi-container setup
+├── render.yaml                  # Render deployment config
+└── Makefile                     # Development shortcuts
+```
+
+### Technology Stack
+
+#### Backend (Python)
+- **FastAPI**: Modern, fast web framework for APIs
+- **Uvicorn**: ASGI server for production deployment
+- **Pydantic**: Data validation and settings management
+- **SQLite**: Local database for bounce list storage
+- **aiosmtplib**: Asynchronous SMTP operations
+- **dnspython**: DNS resolution and MX record checking
+- **email-validator**: RFC-compliant email validation
 - **disposable-email-domains**: Disposable domain detection
-- **aiosmtplib**: Asynchronous SMTP verification
-- **Typer**: Command-line interface
-- **Pydantic**: Data validation and configuration
-- **Loguru**: Logging system
-- **SQLite**: Local database for bounce list
-- **pytest**: Testing framework
-- **Black/isort/flake8**: Formatting and linting
 
-## Installation
+#### Frontend (React/TypeScript)
+- **React 19**: Modern UI framework
+- **TypeScript**: Type-safe development
+- **Vite**: Fast build tool and dev server
+- **Tailwind CSS**: Utility-first CSS framework
+- **React Query**: Server state management
+- **Axios**: HTTP client for API communication
+- **Heroicons**: Beautiful icon library
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/ferroche90/email-validator-tool.git
-   cd email-validator-tool
-   ```
+#### Infrastructure
+- **Docker**: Containerization
+- **Caddy**: Reverse proxy with automatic HTTPS
+- **Render**: Cloud deployment platform
+- **SQLite**: Lightweight database
 
-2. Create and activate virtual environment:
-   ```bash
-   python -m venv venv
-   # On Windows:
-   .\venv\Scripts\activate
-   # On Unix/MacOS:
-   source venv/bin/activate
-   ```
-
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## Configuration
-
-1. Copy the example file:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Adjust variables in `.env`:
-   ```
-   CSV_INPUT_PATH=emails.csv
-   CSV_OUTPUT_PATH=results.csv
-   MAX_CONCURRENT_CONNECTIONS=10
-   PER_DOMAIN_DELAY_SECONDS=5.0
-   SMTP_TIMEOUT=10
-   ENABLE_CATCH_ALL=False
-   ENABLE_SMTP=False
-   ENABLE_DNS_CACHE=True
-   DNS_CACHE_TTL_SECONDS=3600
-   ```
-
-## Deployment on Render
-
-This project includes a complete web application with FastAPI backend and React frontend that can be deployed to Render's free tier.
+## 🚀 Quick Start
 
 ### Prerequisites
+- **Python 3.8+**
+- **Node.js 18+** (for frontend development)
+- **Docker** (for containerized deployment)
 
-- GitHub repository with the project code
-- Render account (free tier available)
+### Local Development Setup
 
-### Deployment Steps
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/ferroche90/email-validator-tool.git
+   cd email-validator
+   ```
 
-1. **Create Web Service from Repository**
-   - Go to [render.com](https://render.com) and create an account
-   - Click "New +" and select "Web Service"
+2. **Install Python dependencies**
+   ```bash
+   pip install -r requirements.txt
+   pip install -r backend/requirements.txt
+   ```
+
+3. **Install frontend dependencies**
+   ```bash
+   cd frontend
+   pnpm install
+   cd ..
+   ```
+
+4. **Start development servers**
+   ```bash
+   # Start both frontend and backend
+   make dev
+   
+   # Or start them separately
+   make dev-frontend  # Frontend on http://localhost:5173
+   make dev-backend   # Backend on http://localhost:8000
+   ```
+
+### Using the Command Line Tool
+
+#### Basic Validation
+```bash
+# Validate emails from CSV file
+python -m email_validator_tool.cli validate input.csv output.csv
+```
+
+#### Advanced Validation
+```bash
+# With catch-all detection
+python -m email_validator_tool.cli validate input.csv output.csv --enable-catch-all
+
+# With SMTP verification
+python -m email_validator_tool.cli validate input.csv output.csv --enable-smtp
+
+# With both advanced features
+python -m email_validator_tool.cli validate input.csv output.csv --enable-catch-all --enable-smtp
+```
+
+#### Using Makefile Shortcuts
+```bash
+# Basic validation
+make v ARGS='input.csv output.csv'
+
+# With catch-all detection
+make vca ARGS='input.csv output.csv'
+
+# With SMTP verification
+make vsmtp ARGS='input.csv output.csv'
+
+# Full validation (both catch-all and SMTP)
+make vfull ARGS='input.csv output.csv'
+```
+
+## 🌐 Web Application
+
+### Features
+- **📱 Responsive Design**: Works on desktop, tablet, and mobile
+- **⚡ Real-time Validation**: Instant feedback on email validation
+- **📊 Results Export**: Download validation results as CSV
+- **🔧 Advanced Options**: Toggle SMTP and catch-all detection
+- **🎨 Modern UI**: Clean, intuitive interface with Tailwind CSS
+
+### Access Points
+- **Frontend**: `http://localhost:5173` (development)
+- **Backend API**: `http://localhost:8000` (development)
+- **API Documentation**: `http://localhost:8000/docs` (Swagger UI)
+- **Health Check**: `http://localhost:8000/health`
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+# API Configuration
+API_TOKEN=your_secure_api_token_here
+ADMIN_TOKEN=your_secure_admin_token_here
+
+# Database
+DATABASE_URL=sqlite:///app.db
+
+# Logging
+LOG_LEVEL=INFO
+
+# CORS
+CORS_ORIGINS=*
+
+# Rate Limiting
+RATE_LIMIT_PER_MINUTE=60
+
+# DNS Cache
+ENABLE_DNS_CACHE=True
+DNS_CACHE_TTL_SECONDS=3600
+
+# SMTP Configuration
+SMTP_TIMEOUT=10
+MAX_CONCURRENT_CONNECTIONS=10
+PER_DOMAIN_DELAY_SECONDS=5.0
+
+# Validation Options
+ENABLE_CATCH_ALL=False
+ENABLE_SMTP=False
+```
+
+### Frontend Configuration
+
+Create a `.env` file in the `frontend/` directory:
+
+```env
+VITE_API_URL=http://localhost:8000
+VITE_API_TOKEN=your_api_token_here
+```
+
+## 🐳 Docker Deployment
+
+### Quick Start with Docker Compose
+
+1. **Build and start all services**
+   ```bash
+   docker compose up -d --build
+   ```
+
+2. **Access the application**
+   - **Frontend**: `http://localhost`
+   - **Backend API**: `http://localhost/api`
+   - **API Docs**: `http://localhost/docs`
+
+### Docker Services
+
+- **API Service**: FastAPI backend with email validation logic
+- **Caddy Service**: Reverse proxy with automatic HTTPS
+- **Volumes**: Persistent storage for SSL certificates and configuration
+
+## ☁️ Cloud Deployment
+
+### Render (Recommended)
+
+This project is optimized for deployment on Render's free tier:
+
+1. **Fork the repository** to your GitHub account
+2. **Connect to Render**:
+   - Go to [render.com](https://render.com)
+   - Create a new Web Service
    - Connect your GitHub repository
-   - Render will automatically detect the `render.yaml` configuration file
+   - Render will automatically detect the `render.yaml` configuration
 
-2. **Add Environment Variables**
-   - The following variables are automatically configured:
-     - `API_TOKEN`: Auto-generated secure token for API authentication
-     - `ADMIN_TOKEN`: Auto-generated secure token for admin endpoints
-     - `DATABASE_URL`: SQLite database for bounce list storage
-     - `LOG_LEVEL`: Set to INFO for production logging
-     - `CORS_ORIGINS`: Allows all origins for frontend integration
-     - `RATE_LIMIT_PER_MINUTE`: 60 requests per minute (free tier limit)
+3. **Automatic Configuration**:
+   - API tokens are auto-generated
+   - HTTPS is automatically configured
+   - Database is automatically provisioned
+   - Rate limiting is configured for free tier
 
-3. **Deploy and Verify**
-   - Click "Create Web Service"
-   - Render will build and deploy your application
-   - Monitor the build logs for any issues
-   - Once deployed, verify the health endpoint: `https://<subdomain>.onrender.com/health`
+4. **Access your deployment**:
+   - **Web Application**: `https://your-app.onrender.com`
+   - **API Endpoints**: `https://your-app.onrender.com/api`
+   - **Health Check**: `https://your-app.onrender.com/health`
 
-4. **Access the Application**
-   - **API Endpoints**: Available at `https://<subdomain>.onrender.com/api/`
-   - **Frontend SPA**: Available at the same URL root `https://<subdomain>.onrender.com/`
-   - **Health Check**: `https://<subdomain>.onrender.com/health`
-   - **API Documentation**: `https://<subdomain>.onrender.com/docs`
-
-### Free Tier Features
-
+### Render Free Tier Features
 - ✅ **No cost** - Completely free deployment
 - ✅ **HTTPS included** - Automatic SSL certificates
 - ✅ **Custom domains** - Can add your own domain
 - ✅ **Auto-scaling** - Handles traffic spikes
 - ✅ **Logs & monitoring** - Built-in observability
 
-### API Usage
+## 📊 API Usage
 
-Once deployed, you can use the API with the generated `API_TOKEN`:
+### Authentication
+All API endpoints require authentication using Bearer tokens:
 
 ```bash
-curl -X POST "https://<subdomain>.onrender.com/api/validate" \
-  -H "Authorization: Bearer YOUR_API_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "emails": ["test@example.com", "invalid@email"],
-    "enable_smtp": false,
-    "enable_catch_all": false
-  }'
+curl -H "Authorization: Bearer YOUR_API_TOKEN" \
+     -H "Content-Type: application/json" \
+     -X POST "https://your-app.onrender.com/api/validate" \
+     -d '{"emails": ["test@example.com"], "enable_smtp": false}'
 ```
 
-## Usage
+### Endpoints
 
-The tool provides several commands for email validation and system management:
+#### Validate Emails
+```http
+POST /api/validate
+Content-Type: application/json
+Authorization: Bearer YOUR_API_TOKEN
 
-### Main Validation Command
-
-#### Validate Email List
-```bash
-python -m email_validator_tool.cli validate input.csv output.csv [OPTIONS]
+{
+  "emails": ["test@example.com", "invalid@email"],
+  "enable_smtp": false,
+  "enable_catch_all": false
+}
 ```
 
-**Options:**
-- `--enable-catch-all`: Enable catch-all detection (phase 2)
-- `--enable-smtp`: Enable SMTP verification (phase 3)
-
-**Examples:**
-```bash
-# Basic validation
-python -m email_validator_tool.cli validate emails.csv results.csv
-
-# With catch-all detection
-python -m email_validator_tool.cli validate emails.csv results.csv --enable-catch-all
-
-# With SMTP verification
-python -m email_validator_tool.cli validate emails.csv results.csv --enable-smtp
-
-# With both advanced features
-python -m email_validator_tool.cli validate emails.csv results.csv --enable-catch-all --enable-smtp
+#### Cache Statistics (Admin)
+```http
+GET /api/cache-stats
+Authorization: Bearer YOUR_ADMIN_TOKEN
 ```
 
-### DNS Cache Management Commands
+#### Clear Cache (Admin)
+```http
+POST /api/cache-clear
+Authorization: Bearer YOUR_ADMIN_TOKEN
+```
 
-#### View Cache Statistics
+#### Bounce Statistics (Admin)
+```http
+GET /api/bounce-stats
+Authorization: Bearer YOUR_ADMIN_TOKEN
+```
+
+### Rate Limiting
+- **Validation endpoint**: 20 requests per minute per IP
+- **Admin endpoints**: 5 requests per minute per IP
+- **Health check**: No limits
+
+## 🛠️ Management Commands
+
+### DNS Cache Management
+
 ```bash
+# View cache statistics
 python -m email_validator_tool.cli cache-stats
-```
-Displays current DNS cache statistics including total entries, valid entries, expired entries, and cache TTL.
+make cache-stats
 
-#### Clear DNS Cache
-```bash
+# Clear all DNS cache
 python -m email_validator_tool.cli clear-cache
-```
-Removes all cached DNS results. Useful when you want to force fresh DNS queries.
+make clear-cache
 
-#### Clean Up Expired Cache Entries
-```bash
+# Clean up expired cache entries
 python -m email_validator_tool.cli cleanup-cache
+make cleanup-cache
 ```
-Removes only expired cache entries while keeping valid ones. This is automatically done periodically during validation.
 
-### Bounce List Management Commands
+### Bounce List Management
 
-#### Reload Bounce List
 ```bash
+# Reload bounce list from database
 python -m email_validator_tool.cli reload-bounce-list
-```
-Reloads the bounce list from the SQLite database into memory. Use this when the database has been updated.
+make reload-bounce
 
-#### View Bounce List Statistics
-```bash
+# View bounce list statistics
 python -m email_validator_tool.cli bounce-stats
+make bounce-stats
 ```
-Shows bounce list statistics including the number of bounce emails loaded in memory.
 
-### Command Summary
+## 🧪 Testing
 
-| Command | Description | Use Case |
-|---------|-------------|----------|
-| `validate input.csv output.csv` | Main validation command | Validate email list |
-| `cache-stats` | View DNS cache statistics | Monitor cache usage |
-| `clear-cache` | Clear all DNS cache | Force fresh DNS queries |
-| `cleanup-cache` | Remove expired cache entries | Clean up old cache data |
-| `reload-bounce-list` | Reload bounce list from DB | Update bounce list |
-| `bounce-stats` | View bounce list statistics | Monitor bounce list |
-
-### Getting Help
-
-To see all available commands:
+### Backend Tests
 ```bash
-python -m email_validator_tool.cli --help
+# Run all tests
+pytest
+
+# Run specific test file
+pytest tests/test_syntax.py
+
+# Run with coverage
+pytest --cov=email_validator_tool
 ```
 
-To get help for a specific command:
+### Frontend Tests
 ```bash
-python -m email_validator_tool.cli [COMMAND] --help
+cd frontend
+pnpm test
+pnpm test:ui
 ```
 
-## DNS Cache Management
+### Development Tools
+```bash
+# Code formatting
+make format
 
-The tool includes an intelligent DNS caching system that stores MX record query results in memory to avoid repeated network requests for the same domains. This significantly improves performance when validating large lists with repeated domains.
+# Linting
+make lint
 
-### Cache Configuration
-
-Add these settings to your `.env` file to configure the DNS cache:
-
+# Run all tests
+make test
 ```
-ENABLE_DNS_CACHE=True
-DNS_CACHE_TTL_SECONDS=3600
-```
 
-- `ENABLE_DNS_CACHE`: Enable/disable DNS caching (default: True)
-- `DNS_CACHE_TTL_SECONDS`: Time to live for cached results in seconds (default: 3600 = 1 hour)
+## 📈 Performance Optimization
 
-### Cache Behavior
+### DNS Caching
+The tool includes intelligent DNS caching to improve performance:
 
-- Cache entries include both successful MX records and error results (invalid domains, no MX records)
-- Automatic cleanup occurs every 100 queries to remove expired entries
-- Cache is domain-based, so different emails from the same domain share the same cache entry
-- Cache persists for the duration of the validation session
+- **Cache TTL**: Configurable time-to-live (default: 1 hour)
+- **Automatic cleanup**: Expired entries are removed automatically
+- **Domain-based**: Different emails from the same domain share cache
+- **Error caching**: Failed DNS queries are also cached to avoid repeated failures
 
-## Validation Layers
+### Batch Processing
+- **Incremental CSV writing**: Results are written as they're processed
+- **Memory efficient**: Large lists are processed without loading everything into memory
+- **Progress tracking**: Real-time progress updates for long-running validations
 
-1. **Syntax (RFC)**
-   - Verifies email complies with RFC specification
-   - Uses email-validator for robust validation
+### Rate Limiting
+- **Per-domain delays**: Configurable delays between requests to the same domain
+- **Concurrent connections**: Limited concurrent SMTP connections
+- **Timeout configuration**: Configurable timeouts for network operations
 
-2. **DNS/MX**
-   - Checks domain existence
-   - Verifies valid MX records
-   - Uses dnspython for DNS resolution
+## ⚠️ Risk Management
 
-3. **Disposable Domains**
-   - Detects temporary email domains
-   - Uses disposable-email-domains dataset
+### SMTP and Catch-all Verification
+These features are considered high-risk and should be used with caution:
 
-4. **Role Accounts**
-   - Identifies generic accounts (admin, info, etc.)
-   - Uses custom patterns and common role account names
+- **IP Blocking**: May result in IP blocking by mail servers
+- **Rate Limiting**: Servers may implement rate limiting
+- **Legal Considerations**: Ensure compliance with applicable laws
 
-5. **Bounce List**
-   - Verifies against local bounce database
-   - Stores history in SQLite
+### Recommendations
+- Use delays between verifications (`PER_DOMAIN_DELAY_SECONDS`)
+- Limit concurrent connections (`MAX_CONCURRENT_CONNECTIONS`)
+- Configure appropriate timeouts (`SMTP_TIMEOUT`)
+- Consider using a dedicated VPS for high-volume validation
+- Implement IP rotation if necessary
 
-6. **Catch-all** (Optional)
-   - Detects domains that accept any email
-   - Requires SMTP verification
+## 📋 Validation Results
 
-7. **SMTP** (Optional)
-   - Verifies actual mailbox existence
-   - Requires direct server connection
+### Status Types
+- **`valid`**: Email passed all validation layers
+- **`invalid_syntax`**: Email format is invalid
+- **`invalid_domain`**: Domain does not exist
+- **`invalid_mx`**: Domain has no valid MX records
+- **`disposable`**: Email uses a disposable domain
+- **`role_account`**: Email is a generic role account
+- **`on_bounce_list`**: Email is in the bounce list
+- **`catch_all`**: Domain accepts any email (when enabled)
+- **`invalid_smtp`**: SMTP verification failed (when enabled)
+- **`unknown_error`**: Unexpected error occurred
 
-## Risk Management
+### Output Format
+Results are provided in CSV format with columns:
+- **Email**: The validated email address
+- **Status**: Validation result status
+- **Details**: Additional information or error details
 
-⚠️ **Warning**: SMTP and catch-all verifications are considered high-risk:
+## 🤝 Contributing
 
-- May result in IP blocking by mail servers
-- Should be used with caution and proper configuration
-- Recommendations:
-  - Use delays between verifications (PER_DOMAIN_DELAY_SECONDS)
-  - Limit concurrent connections (MAX_CONCURRENT_CONNECTIONS)
-  - Configure appropriate timeouts (SMTP_TIMEOUT)
-  - Consider using a dedicated VPS
-  - Implement IP rotation if necessary
+We welcome contributions! Please follow these steps:
 
-## Contributing
+1. **Fork the repository**
+2. **Create a feature branch**: `git checkout -b feature/AmazingFeature`
+3. **Make your changes** and add tests
+4. **Run the test suite**: `make test`
+5. **Format your code**: `make format`
+6. **Commit your changes**: `git commit -m 'Add some AmazingFeature'`
+7. **Push to the branch**: `git push origin feature/AmazingFeature`
+8. **Open a Pull Request**
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+### Development Guidelines
+- Follow PEP 8 for Python code
+- Use TypeScript for frontend code
+- Add tests for new features
+- Update documentation as needed
+- Ensure all tests pass before submitting
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🔒 Privacy and Legal Compliance
+
+This tool is designed for legitimate email validation purposes. Users are responsible for:
+
+- Ensuring they have permission to validate email addresses
+- Complying with applicable anti-spam laws (CAN-SPAM, GDPR, etc.)
+- Respecting rate limits and server policies
+- Using the tool responsibly and ethically
+
+For detailed privacy and legal information, see [POLICY.md](POLICY.md).
+
+## 📞 Support
+
+- **GitHub Issues**: [Report bugs or request features](https://github.com/ferroche90/email-validator-tool.git/issues)
+- **Documentation**: Check the [API documentation](http://localhost:8000/docs) when running locally
+- **Email**: fernando@webatix.com
+
+## 🙏 Acknowledgments
+
+- Built with [FastAPI](https://fastapi.tiangolo.com/) and [React](https://reactjs.org/)
+- Icons from [Heroicons](https://heroicons.com/)
+- Styling with [Tailwind CSS](https://tailwindcss.com/)
+- Deployment optimized for [Render](https://render.com/)
+
+---
+
+**⭐ Star this repository if you find it useful!**
