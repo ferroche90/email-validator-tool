@@ -1,12 +1,14 @@
 # Makefile for email-validator-tool
 
-.PHONY: help lint format test install setup-dev v vca vsmtp vfull cache-stats clear-cache cleanup-cache reload-bounce bounce-stats dev build test
+.PHONY: help lint format test install setup-dev v vca vsmtp vfull cache-stats clear-cache cleanup-cache reload-bounce bounce-stats dev dev-frontend dev-backend build test
 
 help:
 	@echo Email Validator Tool - Makefile Shortcuts
 	@echo.
 	@echo Development Commands:
-	@echo   make dev                              - Start frontend + backend concurrently
+	@echo   make dev                              - Start frontend + backend concurrently (Linux/Mac)
+	@echo   make dev-frontend                     - Start frontend only
+	@echo   make dev-backend                      - Start backend only
 	@echo   make build                            - Build Docker containers
 	@echo   make test                             - Run backend tests
 	@echo.
@@ -33,7 +35,8 @@ help:
 	@echo   make install                                - Install dependencies
 	@echo.
 	@echo Examples:
-	@echo   make dev
+	@echo   make dev-frontend
+	@echo   make dev-backend
 	@echo   make v ARGS='emails.csv results.csv'
 	@echo   make vca ARGS='emails.csv results.csv'
 	@echo   make cache-stats
@@ -70,6 +73,22 @@ dev:
 	@echo.
 	@echo Press Ctrl+C to stop both servers
 	@pnpm --filter frontend dev & cd backend && uvicorn app.main:app --reload
+
+# Separate frontend and backend commands for Windows compatibility
+dev-frontend:
+	@echo Starting frontend development server...
+	@echo Frontend: http://localhost:5173
+	@echo.
+	@echo Press Ctrl+C to stop the server
+	cd frontend && pnpm dev
+
+dev-backend:
+	@echo Starting backend development server...
+	@echo Backend:  http://localhost:8000
+	@echo API Docs: http://localhost:8000/docs
+	@echo.
+	@echo Press Ctrl+C to stop the server
+	cd backend && python -c "import sys; sys.path.insert(0, '..'); import uvicorn; uvicorn.run('app.main:app', host='0.0.0.0', port=8000, reload=True)"
 
 build:
 	@echo Building Docker containers...

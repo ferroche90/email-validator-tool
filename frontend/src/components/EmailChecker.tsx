@@ -37,7 +37,7 @@ export const EmailChecker = () => {
 
     const csvContent = [
       'Email,Status,Details',
-      ...data.results.map(result => 
+      ...data.results.map((result: ValidationResult) => 
         `"${result.email}","${result.status}","${result.details || ''}"`
       )
     ].join('\n')
