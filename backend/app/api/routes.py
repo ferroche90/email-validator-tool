@@ -46,7 +46,7 @@ def verify_admin_token(token: str = Depends(get_current_token)) -> str:
 async def validate_emails(
     request: Request,
     body: ValidateRequest,
-    token: str = Depends(get_current_token),
+    # token: str = Depends(get_current_token),  # Disabled for local development
     validator_service: EmailValidatorService = Depends(get_validator_service),
 ):
     """
