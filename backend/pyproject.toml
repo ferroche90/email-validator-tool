@@ -9,17 +9,15 @@ description = "Backend API for email validation tool"
 authors = [{name = "Webatix", email = "fernando@webatix.com"}]
 requires-python = ">=3.8"
 dependencies = [
+    # Pull in the main library (includes all core dependencies)
+    "email-validator-tool @ file://../",
+
+    # Backend-specific runtime requirements
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
-    "python-dotenv>=1.0.0",
     "slowapi>=0.1.0",
-    "pydantic-settings>=2.0.0",
-    "email-validator>=2.2.0",
-    "aiosmtplib>=4.0.1",
-    "dnspython>=2.7.0",
-    "loguru>=0.7.3",
+    "python-dotenv>=1.0.0",
     "httpx>=0.25.0",
-    "email-validator-tool @ file://../",
 ]
 
 [project.optional-dependencies]
