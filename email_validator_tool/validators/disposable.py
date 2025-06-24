@@ -44,9 +44,7 @@ class DisposableValidator:
                 details="Malformed email address, cannot extract domain.",
             )
         except Exception as e:
-            logger.error(
-                f"An unexpected error occurred in DisposableValidator for {email}: {e}"
-            )
+            logger.error(f"An unexpected error occurred in DisposableValidator for {email}: {e}")
             return ValidationResult(
                 email=email,
                 status=ValidationStatus.UNKNOWN_ERROR,

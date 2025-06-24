@@ -66,9 +66,7 @@ class BounceListValidator:
     def __init__(self):
         """Initialize the validator by loading the bounce list into memory."""
         self.bounce_set = load_bounce_list()
-        logger.info(
-            f"BounceListValidator initialized with {len(self.bounce_set)} emails in memory"
-        )
+        logger.info(f"BounceListValidator initialized with {len(self.bounce_set)} emails in memory")
 
     def reload_bounce_list(self) -> int:
         """
@@ -114,9 +112,7 @@ class BounceListValidator:
             return ValidationResult(email=email, status=ValidationStatus.VALID)
 
         except Exception as e:
-            logger.error(
-                f"An unexpected error occurred in BounceListValidator for {email}: {e}"
-            )
+            logger.error(f"An unexpected error occurred in BounceListValidator for {email}: {e}")
             return ValidationResult(
                 email=email,
                 status=ValidationStatus.UNKNOWN_ERROR,

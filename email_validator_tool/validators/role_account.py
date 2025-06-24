@@ -124,6 +124,4 @@ class RoleAccountValidator:
 
         except Exception as e:
             logger.error(f"Error validating role account status for {email}: {str(e)}")
-            return ValidationResult(
-                email=email, status=ValidationStatus.UNKNOWN_ERROR, details=str(e)
-            )
+            return ValidationResult(email=email, status=ValidationStatus.UNKNOWN_ERROR, details=str(e))

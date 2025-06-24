@@ -20,9 +20,7 @@ router = APIRouter()
 # Global validator instances for sharing across requests
 _settings = get_settings()
 _global_dns_validator = DNSMXValidator(
-    cache_ttl_seconds=(
-        _settings.DNS_CACHE_TTL_SECONDS if _settings.ENABLE_DNS_CACHE else 0
-    )
+    cache_ttl_seconds=(_settings.DNS_CACHE_TTL_SECONDS if _settings.ENABLE_DNS_CACHE else 0)
 )
 _global_bounce_validator = BounceListValidator()
 
@@ -35,9 +33,7 @@ class ValidateRequest(BaseModel):
 
 def get_validator_service() -> EmailValidatorService:
     """Dependency to inject EmailValidatorService with global validator instances"""
-    return EmailValidatorService(
-        dns_validator=_global_dns_validator, bounce_validator=_global_bounce_validator
-    )
+    return EmailValidatorService(dns_validator=_global_dns_validator, bounce_validator=_global_bounce_validator)
 
 
 def verify_admin_token(token: str = Depends(get_current_token)) -> str:
@@ -73,9 +69,7 @@ async def validate_emails(
 
 @router.get("/cache-stats")
 @limiter.limit("5/minute")
-async def get_cache_stats(
-    request: Request, admin_token: str = Depends(verify_admin_token)
-):
+async def get_cache_stats(request: Request, admin_token: str = Depends(verify_admin_token)):
     """
     Get DNS cache statistics.
     Admin access required. Rate limited to 5 requests per minute.
@@ -88,9 +82,7 @@ async def get_cache_stats(
             "cache_ttl_seconds": _settings.DNS_CACHE_TTL_SECONDS,
         }
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error getting cache stats: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error getting cache stats: {str(e)}")
 
 
 @router.post("/cache-clear")
@@ -112,9 +104,7 @@ async def clear_cache(request: Request, admin_token: str = Depends(verify_admin_
 
 @router.get("/bounce-stats")
 @limiter.limit("5/minute")
-async def get_bounce_stats(
-    request: Request, admin_token: str = Depends(verify_admin_token)
-):
+async def get_bounce_stats(request: Request, admin_token: str = Depends(verify_admin_token)):
     """
     Get bounce list statistics.
     Admin access required. Rate limited to 5 requests per minute.
@@ -127,9 +117,7 @@ async def get_bounce_stats(
             "database_path": "bounce_list.db",
         }
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Error getting bounce stats: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error getting bounce stats: {str(e)}")
 
 
 @router.get("/health")

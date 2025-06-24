@@ -20,9 +20,7 @@ def test_disposable_validation(valid_email, validation_result):
     assert result is True
 
 
-def test_disposable_validation_with_disposable_email(
-    disposable_email, validation_result
-):
+def test_disposable_validation_with_disposable_email(disposable_email, validation_result):
     """Test disposable email validation with a disposable email."""
     validator = DisposableValidator()
     result = validator.validate(disposable_email, validation_result)

@@ -32,9 +32,7 @@ class EmailLoader:
                 # Skip header if exists
                 next(reader, None)
                 for row in reader:
-                    if (
-                        row and row[0].strip()
-                    ):  # Check if row is not empty and email is not just whitespace
+                    if row and row[0].strip():  # Check if row is not empty and email is not just whitespace
                         emails.append(row[0].strip())
 
             logger.info(f"Loaded {len(emails)} emails from {file_path}")
@@ -83,9 +81,7 @@ class EmailLoader:
         try:
             with open(file_path, "a", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
-                writer.writerow(
-                    [result.email, result.status.value, result.details or ""]
-                )
+                writer.writerow([result.email, result.status.value, result.details or ""])
                 # Force immediate write to disk for real-time visibility
                 f.flush()
                 os.fsync(f.fileno())
@@ -115,9 +111,7 @@ class EmailLoader:
                 writer.writerow(["Email", "Status", "Details"])
                 # Write results
                 for result in results:
-                    writer.writerow(
-                        [result.email, result.status.value, result.details or ""]
-                    )
+                    writer.writerow([result.email, result.status.value, result.details or ""])
 
             logger.info(f"Wrote {len(results)} results to {file_path}")
 

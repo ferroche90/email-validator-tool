@@ -41,9 +41,7 @@ class ValidationPipeline:
         # Initialize or use provided DNS validator
         if dns_validator is None:
             self.dns_validator = DNSMXValidator(
-                cache_ttl_seconds=(
-                    settings.DNS_CACHE_TTL_SECONDS if settings.ENABLE_DNS_CACHE else 0
-                )
+                cache_ttl_seconds=(settings.DNS_CACHE_TTL_SECONDS if settings.ENABLE_DNS_CACHE else 0)
             )
         else:
             self.dns_validator = dns_validator
@@ -71,9 +69,7 @@ class ValidationPipeline:
             self.validators.append(SMTPValidator())
 
         # Store configuration
-        self.max_concurrent_connections = (
-            max_concurrent_connections or settings.MAX_CONCURRENT_CONNECTIONS
-        )
+        self.max_concurrent_connections = max_concurrent_connections or settings.MAX_CONCURRENT_CONNECTIONS
 
     def clear_dns_cache(self) -> int:
         """
@@ -123,9 +119,7 @@ class ValidationPipeline:
             "loaded_in_memory": True,
         }
 
-    async def run_pipeline(
-        self, emails: List[str]
-    ) -> AsyncGenerator[ValidationResult, None]:
+    async def run_pipeline(self, emails: List[str]) -> AsyncGenerator[ValidationResult, None]:
         """
         Run the validation pipeline on a list of emails concurrently.
 
@@ -185,9 +179,7 @@ class ValidationPipeline:
                 if result.status != ValidationStatus.VALID:
                     return result
             except Exception as e:
-                logger.error(
-                    f"Error in {validator.__class__.__name__} for {email}: {str(e)}"
-                )
+                logger.error(f"Error in {validator.__class__.__name__} for {email}: {str(e)}")
                 return ValidationResult(
                     email=email,
                     status=ValidationStatus.UNKNOWN_ERROR,

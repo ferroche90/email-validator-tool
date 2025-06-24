@@ -55,9 +55,7 @@ class EmailValidatorService:
                     {
                         **result.dict(),
                         "status": (
-                            result.status.value
-                            if isinstance(result.status, ValidationStatus)
-                            else str(result.status)
+                            result.status.value if isinstance(result.status, ValidationStatus) else str(result.status)
                         ),
                     }
                 )

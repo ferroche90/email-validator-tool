@@ -73,9 +73,7 @@ class CatchAllValidator:
                     response_code, _ = await smtp.rcpt(fake_email)
 
                     if response_code == 250:
-                        logger.warning(
-                            f"Domain '{domain}' appears to be a catch-all (accepted fake email)."
-                        )
+                        logger.warning(f"Domain '{domain}' appears to be a catch-all (accepted fake email).")
                         return ValidationResult(
                             email=email,
                             status=ValidationStatus.CATCH_ALL,
@@ -83,9 +81,7 @@ class CatchAllValidator:
                         )
                     else:
                         # If the fake email is rejected, it's not a catch-all. This is good.
-                        return ValidationResult(
-                            email=email, status=ValidationStatus.VALID
-                        )
+                        return ValidationResult(email=email, status=ValidationStatus.VALID)
 
             except (aiosmtplib.SMTPConnectError, asyncio.TimeoutError):
                 logger.warning(f"Connection failed to {mx_server} for catch-all check.")
@@ -96,9 +92,7 @@ class CatchAllValidator:
                 )
             except Exception as e:
                 logger.error(f"Error during catch-all SMTP check for {domain}: {e}")
-                return ValidationResult(
-                    email=email, status=ValidationStatus.UNKNOWN_ERROR, details=str(e)
-                )
+                return ValidationResult(email=email, status=ValidationStatus.UNKNOWN_ERROR, details=str(e))
 
         except IndexError:
             return ValidationResult(
@@ -108,6 +102,4 @@ class CatchAllValidator:
             )
         except Exception as e:
             logger.error(f"Error during catch-all validation for {email}: {e}")
-            return ValidationResult(
-                email=email, status=ValidationStatus.UNKNOWN_ERROR, details=str(e)
-            )
+            return ValidationResult(email=email, status=ValidationStatus.UNKNOWN_ERROR, details=str(e))

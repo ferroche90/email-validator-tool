@@ -20,9 +20,7 @@ def test_role_account_validation(valid_email, validation_result):
     assert result is True
 
 
-def test_role_account_validation_with_role_account(
-    role_account_email, validation_result
-):
+def test_role_account_validation_with_role_account(role_account_email, validation_result):
     """Test role account validation with a role account email."""
     validator = RoleAccountValidator()
     result = validator.validate(role_account_email, validation_result)

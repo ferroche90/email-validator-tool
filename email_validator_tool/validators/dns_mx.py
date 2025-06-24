@@ -19,9 +19,7 @@ class DNSMXValidator:
         """
         self.mx_cache: Dict[str, Tuple[ValidationResult, float]] = {}
         self.cache_ttl_seconds = cache_ttl_seconds
-        logger.info(
-            f"DNS MX Validator initialized with cache TTL: {cache_ttl_seconds} seconds"
-        )
+        logger.info(f"DNS MX Validator initialized with cache TTL: {cache_ttl_seconds} seconds")
 
     def clear_cache(self) -> int:
         """

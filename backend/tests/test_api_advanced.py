@@ -109,48 +109,36 @@ def test_admin_endpoints_unauthorized(client: TestClient):
 def test_admin_endpoints_with_regular_token(client: TestClient):
     """Test admin endpoints return 403 with regular token."""
     # Test cache-stats
-    response = client.get(
-        "/api/cache-stats", headers={"Authorization": "Bearer YOUR_TOKEN_HERE"}
-    )
+    response = client.get("/api/cache-stats", headers={"Authorization": "Bearer YOUR_TOKEN_HERE"})
     assert response.status_code == 403
 
     # Test cache-clear
-    response = client.post(
-        "/api/cache-clear", headers={"Authorization": "Bearer YOUR_TOKEN_HERE"}
-    )
+    response = client.post("/api/cache-clear", headers={"Authorization": "Bearer YOUR_TOKEN_HERE"})
     assert response.status_code == 403
 
     # Test bounce-stats
-    response = client.get(
-        "/api/bounce-stats", headers={"Authorization": "Bearer YOUR_TOKEN_HERE"}
-    )
+    response = client.get("/api/bounce-stats", headers={"Authorization": "Bearer YOUR_TOKEN_HERE"})
     assert response.status_code == 403
 
 
 def test_admin_endpoints_success(client: TestClient):
     """Test admin endpoints with admin token."""
     # Test cache-stats
-    response = client.get(
-        "/api/cache-stats", headers={"Authorization": "Bearer admin_token_here"}
-    )
+    response = client.get("/api/cache-stats", headers={"Authorization": "Bearer admin_token_here"})
     assert response.status_code == 200
     data = response.json()
     assert "cache_stats" in data
     assert "cache_enabled" in data
 
     # Test cache-clear
-    response = client.post(
-        "/api/cache-clear", headers={"Authorization": "Bearer admin_token_here"}
-    )
+    response = client.post("/api/cache-clear", headers={"Authorization": "Bearer admin_token_here"})
     assert response.status_code == 200
     data = response.json()
     assert "cleared" in data
     assert "message" in data
 
     # Test bounce-stats
-    response = client.get(
-        "/api/bounce-stats", headers={"Authorization": "Bearer admin_token_here"}
-    )
+    response = client.get("/api/bounce-stats", headers={"Authorization": "Bearer admin_token_here"})
     assert response.status_code == 200
     data = response.json()
     assert "bounce_count" in data

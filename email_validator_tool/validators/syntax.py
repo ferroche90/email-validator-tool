@@ -24,10 +24,7 @@ class SyntaxValidator:
                 "No MX record",
                 "not a valid domain",
             ]
-            if any(
-                keyword.lower() in error_message.lower()
-                for keyword in domain_error_keywords
-            ):
+            if any(keyword.lower() in error_message.lower() for keyword in domain_error_keywords):
                 logger.warning(f"Invalid domain for {email}: {error_message}")
                 return ValidationResult(
                     email=email,

@@ -49,9 +49,7 @@ def get_settings() -> Settings:
     return _settings_instance
 
 
-def update_settings(
-    enable_catch_all: Optional[bool] = None, enable_smtp: Optional[bool] = None
-) -> Settings:
+def update_settings(enable_catch_all: Optional[bool] = None, enable_smtp: Optional[bool] = None) -> Settings:
     """
     Update settings dynamically and return the updated instance.
     This clears the cache to ensure fresh settings are used.

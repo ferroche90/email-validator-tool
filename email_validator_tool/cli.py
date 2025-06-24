@@ -61,9 +61,7 @@ def validate(
             enable_smtp=enable_smtp if enable_smtp else None,
         )
 
-        logger.info(
-            f"Configuration: ENABLE_CATCH_ALL={settings.ENABLE_CATCH_ALL}, ENABLE_SMTP={settings.ENABLE_SMTP}"
-        )
+        logger.info(f"Configuration: ENABLE_CATCH_ALL={settings.ENABLE_CATCH_ALL}, ENABLE_SMTP={settings.ENABLE_SMTP}")
 
         # Load emails
         logger.info(f"Loading emails from {input_path}")
@@ -90,9 +88,7 @@ def validate(
                 processed_count += 1
                 # Log progress every 100 emails or for the last email
                 if processed_count % 100 == 0 or processed_count == len(emails):
-                    logger.info(
-                        f"Progress: {processed_count}/{len(emails)} emails processed and saved to CSV"
-                    )
+                    logger.info(f"Progress: {processed_count}/{len(emails)} emails processed and saved to CSV")
 
         # Run the pipeline
         asyncio.run(process_and_write())
@@ -113,9 +109,7 @@ def clear_cache():
     try:
         pipeline = ValidationPipeline()
         removed_count = pipeline.clear_dns_cache()
-        logger.success(
-            f"DNS cache cleared successfully. Removed {removed_count} entries."
-        )
+        logger.success(f"DNS cache cleared successfully. Removed {removed_count} entries.")
     except Exception as e:
         logger.error(f"Error clearing DNS cache: {str(e)}")
         raise typer.Exit(1)
@@ -145,9 +139,7 @@ def cleanup_cache():
     try:
         pipeline = ValidationPipeline()
         removed_count = pipeline.cleanup_expired_dns_cache()
-        logger.success(
-            f"Expired cache entries cleaned up. Removed {removed_count} entries."
-        )
+        logger.success(f"Expired cache entries cleaned up. Removed {removed_count} entries.")
     except Exception as e:
         logger.error(f"Error cleaning up cache: {str(e)}")
         raise typer.Exit(1)
@@ -159,9 +151,7 @@ def reload_bounce_list():
     try:
         pipeline = ValidationPipeline()
         bounce_count = pipeline.reload_bounce_list()
-        logger.success(
-            f"Bounce list reloaded successfully. Loaded {bounce_count} emails."
-        )
+        logger.success(f"Bounce list reloaded successfully. Loaded {bounce_count} emails.")
     except Exception as e:
         logger.error(f"Error reloading bounce list: {str(e)}")
         raise typer.Exit(1)
