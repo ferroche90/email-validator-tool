@@ -22,7 +22,8 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt ./requirements.txt
 COPY backend/requirements.txt ./backend-requirements.txt
 
-RUN pip install --no-cache-dir -r backend-requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+pip install --no-cache-dir -r backend-requirements.txt
 
 # Copy backend application code so that it is importable as top-level "app"
 COPY backend/app ./app
