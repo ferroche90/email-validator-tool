@@ -50,6 +50,7 @@ async def validate_emails(
     request: Request,
     body: ValidateRequest,
     validator_service: EmailValidatorService = Depends(get_validator_service),
+    token: str = Depends(get_current_token),
 ):
     """
     Validate a list of email addresses.

@@ -2,6 +2,7 @@
 Common test fixtures for email validator tests.
 """
 
+import os
 from unittest.mock import patch
 
 import pytest
@@ -51,6 +52,9 @@ def validation_pipeline():
 @pytest.fixture
 def client():
     """FastAPI TestClient with overridden settings for testing."""
+    # Set test API token to admin_token_here for admin tests
+    os.environ["API_TOKEN"] = "admin_token_here"
+    
     with patch("email_validator_tool.config.get_settings") as mock_settings:
         # Override settings for testing
         mock_settings.return_value.ENABLE_DNS_CACHE = False
@@ -61,4 +65,5 @@ def client():
         mock_settings.return_value.SMTP_TIMEOUT = 1
 
         with TestClient(app) as test_client:
+            # Removed rate limiter reset (reset_all does not exist)
             yield test_client

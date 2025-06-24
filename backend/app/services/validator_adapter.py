@@ -53,7 +53,7 @@ class EmailValidatorService:
                 # Convert ValidationResult to dict, enum as string
                 results.append(
                     {
-                        **result.dict(),
+                        **result.model_dump(),
                         "status": (
                             result.status.value if isinstance(result.status, ValidationStatus) else str(result.status)
                         ),
