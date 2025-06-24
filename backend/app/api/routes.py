@@ -2,8 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
+from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from email_validator_tool.config import get_settings
@@ -54,7 +53,6 @@ def verify_admin_token(token: str = Depends(get_current_token)) -> str:
 async def validate_emails(
     request: Request,
     body: ValidateRequest,
-    # token: str = Depends(get_current_token),  # Disabled for local development
     validator_service: EmailValidatorService = Depends(get_validator_service),
 ):
     """
@@ -132,3 +130,8 @@ async def get_bounce_stats(
         raise HTTPException(
             status_code=500, detail=f"Error getting bounce stats: {str(e)}"
         )
+
+
+@router.get("/health")
+async def health_check():
+    return {"status": "ok"}

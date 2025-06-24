@@ -1,6 +1,5 @@
 import asyncio
 import time
-from email.mime.text import MIMEText
 from typing import Dict
 
 import aiosmtplib

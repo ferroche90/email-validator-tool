@@ -1,8 +1,7 @@
 import time
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 import dns.resolver
-from email_validator import EmailNotValidError, validate_email
 from loguru import logger
 
 from email_validator_tool.core.models import ValidationResult, ValidationStatus

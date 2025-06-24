@@ -10,7 +10,7 @@ class SyntaxValidator:
     async def validate(self, email: str) -> ValidationResult:
         try:
             # Validate email syntax
-            validated = validate_email(email)
+            validate_email(email)
             logger.info(f"Email {email} has valid syntax")
             return ValidationResult(email=email, status=ValidationStatus.VALID)
         except EmailNotValidError as e:

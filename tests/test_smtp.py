@@ -1,8 +1,6 @@
 """
-Tests for the SMTP email validator.
+Tests for the SMTP validator.
 """
-
-import pytest
 
 from email_validator_tool.validators.smtp import SMTPValidator
 

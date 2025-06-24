@@ -2,8 +2,6 @@
 Tests for the role account validator.
 """
 
-import pytest
-
 from email_validator_tool.validators.role_account import RoleAccountValidator
 
 
