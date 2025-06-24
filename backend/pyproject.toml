@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "email-validator-backend"
+version = "0.1.0"
+description = "Backend API for email validation tool"
+authors = [{name = "Webatix", email = "fernando@webatix.com"}]
+requires-python = ">=3.8"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "python-dotenv>=1.0.0",
+    "slowapi>=0.1.0",
+    "pydantic-settings>=2.0.0",
+    "email-validator>=2.2.0",
+    "aiosmtplib>=4.0.1",
+    "dnspython>=2.7.0",
+    "loguru>=0.7.3",
+    "httpx>=0.25.0",
+    "email-validator-tool @ file://../",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.0.0",
+    "pytest-cov>=4.1.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--asyncio-mode=auto",
+] 
