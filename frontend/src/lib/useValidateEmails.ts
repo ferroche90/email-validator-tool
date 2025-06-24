@@ -29,7 +29,7 @@ const validateEmails = async (request: ValidateRequest): Promise<ValidateRespons
 export const useValidateEmails = () => {
   const mutation = useMutation({
     mutationFn: validateEmails,
-    onError: (error: any) => {
+    onError: (error: Error | unknown) => {
       console.error('Email validation error:', error)
     },
   })

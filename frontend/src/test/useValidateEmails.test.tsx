@@ -75,7 +75,7 @@ describe('useValidateEmails', () => {
     const mockAxios = axios.create()
     
     // Create a promise that doesn't resolve immediately
-    let resolvePromise: (value: any) => void
+    let resolvePromise: (value: { data: { results: Array<{ email: string; status: string }> } }) => void
     const pendingPromise = new Promise((resolve) => {
       resolvePromise = resolve
     })
@@ -135,7 +135,7 @@ describe('useValidateEmails', () => {
     })
 
     expect(mutation.error).toBeDefined()
-    expect(mutation.error?.message).toBe('Network error')
+    expect((mutation.error as Error)?.message).toBe('Network error')
   })
 
   it('should handle API error response', async () => {

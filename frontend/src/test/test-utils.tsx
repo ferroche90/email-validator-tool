@@ -36,5 +36,18 @@ const customRender = (
   }
 }
 
-export * from '@testing-library/react'
+// Re-export everything from testing-library
+export {
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+  getByText,
+  getByRole,
+  getByLabelText,
+  queryByText,
+  queryByRole,
+  findByText,
+  findByRole,
+} from '@testing-library/react'
 export { customRender as render } 
