@@ -14,18 +14,18 @@ from .validators import (
     catch_all,
     bounce_list,
     role_account,
-    disposable
+    disposable,
 )
 
 __all__ = [
-    'ValidationPipeline',
-    'EmailLoader',
-    'ValidationResult',
-    'syntax',
-    'dns_mx',
-    'smtp',
-    'catch_all',
-    'bounce_list',
-    'role_account',
-    'disposable'
+    "ValidationPipeline",
+    "EmailLoader",
+    "ValidationResult",
+    "syntax",
+    "dns_mx",
+    "smtp",
+    "catch_all",
+    "bounce_list",
+    "role_account",
+    "disposable",
 ]

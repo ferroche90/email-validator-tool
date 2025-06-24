@@ -11,11 +11,11 @@ from . import role_account
 from . import disposable
 
 __all__ = [
-    'syntax',
-    'dns_mx',
-    'smtp',
-    'catch_all',
-    'bounce_list',
-    'role_account',
-    'disposable'
+    "syntax",
+    "dns_mx",
+    "smtp",
+    "catch_all",
+    "bounce_list",
+    "role_account",
+    "disposable",
 ]

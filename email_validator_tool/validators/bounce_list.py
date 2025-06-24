@@ -7,26 +7,30 @@ from email_validator_tool.core.models import ValidationResult, ValidationStatus
 
 DB_PATH = Path("bounce_list.db")
 
+
 def setup_database():
     """Create the bounces table if it doesn't exist."""
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS bounces (
                 email TEXT PRIMARY KEY
             )
-        """)
+        """
+        )
         conn.commit()
         conn.close()
         logger.info(f"Database '{DB_PATH}' setup complete.")
     except sqlite3.Error as e:
         logger.critical(f"Failed to set up SQLite database: {e}")
 
+
 def load_bounce_list() -> Set[str]:
     """
     Load all bounce emails from the database into a Python set.
-    
+
     Returns:
         Set containing all bounce emails
     """
@@ -37,19 +41,20 @@ def load_bounce_list() -> Set[str]:
         cursor = conn.cursor()
         cursor.execute("SELECT email FROM bounces")
         rows = cursor.fetchall()
-        
+
         for row in rows:
             bounce_set.add(row[0])
-        
+
         logger.info(f"Loaded {len(bounce_set)} bounce emails into memory")
         return bounce_set
-        
+
     except sqlite3.Error as e:
         logger.error(f"Failed to load bounce list from database: {e}")
         return set()
     finally:
         if conn:
             conn.close()
+
 
 class BounceListValidator:
     """
@@ -60,12 +65,14 @@ class BounceListValidator:
     def __init__(self):
         """Initialize the validator by loading the bounce list into memory."""
         self.bounce_set = load_bounce_list()
-        logger.info(f"BounceListValidator initialized with {len(self.bounce_set)} emails in memory")
+        logger.info(
+            f"BounceListValidator initialized with {len(self.bounce_set)} emails in memory"
+        )
 
     def reload_bounce_list(self) -> int:
         """
         Reload the bounce list from the database.
-        
+
         Returns:
             Number of bounce emails loaded
         """
@@ -75,7 +82,7 @@ class BounceListValidator:
     def get_bounce_count(self) -> int:
         """
         Get the current number of bounce emails in memory.
-        
+
         Returns:
             Number of bounce emails
         """
@@ -100,21 +107,21 @@ class BounceListValidator:
                 return ValidationResult(
                     email=email,
                     status=ValidationStatus.ON_BOUNCE_LIST,
-                    details="Email is on the bounce list."
+                    details="Email is on the bounce list.",
                 )
 
-            return ValidationResult(
-                email=email,
-                status=ValidationStatus.VALID
-            )
+            return ValidationResult(email=email, status=ValidationStatus.VALID)
 
         except Exception as e:
-            logger.error(f"An unexpected error occurred in BounceListValidator for {email}: {e}")
+            logger.error(
+                f"An unexpected error occurred in BounceListValidator for {email}: {e}"
+            )
             return ValidationResult(
                 email=email,
                 status=ValidationStatus.UNKNOWN_ERROR,
-                details=f"Unexpected error: {str(e)}"
+                details=f"Unexpected error: {str(e)}",
             )
+
 
 # Initialize database on module import
 setup_database()

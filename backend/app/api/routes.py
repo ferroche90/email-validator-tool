@@ -18,21 +18,25 @@ router = APIRouter()
 # Global validator instances for sharing across requests
 _settings = get_settings()
 _global_dns_validator = DNSMXValidator(
-    cache_ttl_seconds=_settings.DNS_CACHE_TTL_SECONDS if _settings.ENABLE_DNS_CACHE else 0
+    cache_ttl_seconds=(
+        _settings.DNS_CACHE_TTL_SECONDS if _settings.ENABLE_DNS_CACHE else 0
+    )
 )
 _global_bounce_validator = BounceListValidator()
+
 
 class ValidateRequest(BaseModel):
     emails: List[str]
     enable_smtp: bool = False
     enable_catch_all: bool = False
 
+
 def get_validator_service() -> EmailValidatorService:
     """Dependency to inject EmailValidatorService with global validator instances"""
     return EmailValidatorService(
-        dns_validator=_global_dns_validator,
-        bounce_validator=_global_bounce_validator
+        dns_validator=_global_dns_validator, bounce_validator=_global_bounce_validator
     )
+
 
 def verify_admin_token(token: str = Depends(get_current_token)) -> str:
     """Verify admin token for administrative endpoints"""
@@ -40,6 +44,7 @@ def verify_admin_token(token: str = Depends(get_current_token)) -> str:
     if token != "admin_token_here":  # Replace with actual admin token
         raise HTTPException(status_code=403, detail="Admin access required")
     return token
+
 
 @router.post("/validate")
 @limiter.limit("20/minute")
@@ -58,17 +63,17 @@ async def validate_emails(
         results = await validator_service.validate_many(
             emails=body.emails,
             enable_smtp=body.enable_smtp,
-            enable_catch_all=body.enable_catch_all
+            enable_catch_all=body.enable_catch_all,
         )
         return {"results": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Validation error: {str(e)}")
 
+
 @router.get("/cache-stats")
 @limiter.limit("5/minute")
 async def get_cache_stats(
-    request: Request,
-    admin_token: str = Depends(verify_admin_token)
+    request: Request, admin_token: str = Depends(verify_admin_token)
 ):
     """
     Get DNS cache statistics.
@@ -79,17 +84,17 @@ async def get_cache_stats(
         return {
             "cache_stats": stats,
             "cache_enabled": _settings.ENABLE_DNS_CACHE,
-            "cache_ttl_seconds": _settings.DNS_CACHE_TTL_SECONDS
+            "cache_ttl_seconds": _settings.DNS_CACHE_TTL_SECONDS,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting cache stats: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error getting cache stats: {str(e)}"
+        )
+
 
 @router.post("/cache-clear")
 @limiter.limit("5/minute")
-async def clear_cache(
-    request: Request,
-    admin_token: str = Depends(verify_admin_token)
-):
+async def clear_cache(request: Request, admin_token: str = Depends(verify_admin_token)):
     """
     Clear DNS cache.
     Admin access required. Rate limited to 5 requests per minute.
@@ -98,16 +103,16 @@ async def clear_cache(
         cleared_count = _global_dns_validator.clear_cache()
         return {
             "cleared": cleared_count,
-            "message": f"DNS cache cleared successfully. Removed {cleared_count} entries."
+            "message": f"DNS cache cleared successfully. Removed {cleared_count} entries.",
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error clearing cache: {str(e)}")
 
+
 @router.get("/bounce-stats")
 @limiter.limit("5/minute")
 async def get_bounce_stats(
-    request: Request,
-    admin_token: str = Depends(verify_admin_token)
+    request: Request, admin_token: str = Depends(verify_admin_token)
 ):
     """
     Get bounce list statistics.
@@ -118,7 +123,9 @@ async def get_bounce_stats(
         return {
             "bounce_count": bounce_count,
             "loaded_in_memory": True,
-            "database_path": "bounce_list.db"
+            "database_path": "bounce_list.db",
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting bounce stats: {str(e)}") 
+        raise HTTPException(
+            status_code=500, detail=f"Error getting bounce stats: {str(e)}"
+        )
