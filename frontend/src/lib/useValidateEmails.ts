@@ -36,7 +36,7 @@ export const useValidateEmails = () => {
 
   return {
     mutate: mutation.mutate,
-    isLoading: mutation.isPending,
+    isPending: mutation.isPending,
     error: mutation.error,
     data: mutation.data,
   }
