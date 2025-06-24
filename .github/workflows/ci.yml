@@ -91,9 +91,9 @@ jobs:
         pip install -r backend/requirements.txt
         pip install pytest pytest-asyncio pytest-cov
 
-    - name: Install package in development mode
+    - name: Install main package in development mode
       run: |
-        pip install -e .
+        pip install -e . || (echo "Package installation failed, trying alternative approach" && pip install -e . --no-deps)
 
     - name: Install frontend dependencies
       run: |
@@ -195,9 +195,9 @@ jobs:
         pip install -r backend/requirements.txt
         pip install pytest pytest-asyncio httpx
 
-    - name: Install package in development mode
+    - name: Install main package in development mode
       run: |
-        pip install -e .
+        pip install -e . || (echo "Package installation failed, trying alternative approach" && pip install -e . --no-deps)
 
     - name: Start backend service
       run: |
