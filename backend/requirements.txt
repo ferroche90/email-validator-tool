@@ -1,12 +1,6 @@
+-r ../requirements.txt
 fastapi
 uvicorn[standard]
 python-dotenv
 slowapi
-pydantic-settings
-email-validator
-aiosmtplib
-dnspython
-loguru
-pytest
-pytest-asyncio
 httpx 
