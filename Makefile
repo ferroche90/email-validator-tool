@@ -1,6 +1,6 @@
 # Makefile for email-validator-tool
 
-.PHONY: help lint format test install setup-dev v vca vsmtp vfull cache-stats clear-cache cleanup-cache reload-bounce bounce-stats dev dev-frontend dev-backend build test
+.PHONY: help lint format test install setup-dev v vca vsmtp vfull cache-stats clear-cache cleanup-cache reload-bounce bounce-stats dev dev-frontend dev-backend build test lint-windows format-windows
 
 help:
 	@echo Email Validator Tool - Makefile Shortcuts
@@ -11,6 +11,12 @@ help:
 	@echo   make dev-backend                      - Start backend only
 	@echo   make build                            - Build Docker containers
 	@echo   make test                             - Run backend tests
+	@echo.
+	@echo Linting Commands:
+	@echo   make lint                             - Run all linting checks (Linux/Mac)
+	@echo   make lint-windows                     - Run all linting checks (Windows)
+	@echo   make format                           - Format code (Linux/Mac)
+	@echo   make format-windows                   - Format code (Windows)
 	@echo.
 	@echo Validation Commands:
 	@echo   make v ARGS='input.csv output.csv'          - Basic validation
@@ -29,14 +35,13 @@ help:
 	@echo.
 	@echo Development:
 	@echo   make setup-dev                              - Install development dependencies
-	@echo   make lint                                   - Run linting checks (requires setup-dev)
-	@echo   make format                                 - Format code (requires setup-dev)
-	@echo   make test                                   - Run tests (requires setup-dev)
 	@echo   make install                                - Install dependencies
 	@echo.
 	@echo Examples:
 	@echo   make dev-frontend
 	@echo   make dev-backend
+	@echo   make lint-windows
+	@echo   make format-windows
 	@echo   make v ARGS='emails.csv results.csv'
 	@echo   make vca ARGS='emails.csv results.csv'
 	@echo   make cache-stats
@@ -48,15 +53,43 @@ setup-dev:
 	@echo   python -m pip install flake8 black isort pytest
 	python -m pip install flake8 black isort pytest || echo "Installation failed. Try running the command manually."
 
-# Development commands (with graceful fallback)
+# Linting commands for Linux/Mac
 lint:
 	@echo Running linting checks...
-	@python -c "import flake8" 2>/dev/null && flake8 email_validator_tool tests || echo "flake8 not available. Run 'make setup-dev' first."
+	@echo Running black...
+	@python -m black --check email_validator_tool tests backend
+	@echo Running isort...
+	@python -m isort --check-only email_validator_tool tests backend
+	@echo Running flake8...
+	@python -m flake8 email_validator_tool tests backend --max-line-length=120
+	@echo All linting checks passed!
 
+# Linting commands for Windows
+lint-windows:
+	@echo Running linting checks (Windows)...
+	@echo Running black...
+	@python -m black --check email_validator_tool tests backend
+	@echo Running isort...
+	@python -m isort --check-only email_validator_tool tests backend
+	@echo Running flake8...
+	@python -m flake8 email_validator_tool tests backend --max-line-length=120
+	@echo All linting checks passed!
+
+# Formatting commands for Linux/Mac
 format:
 	@echo Formatting code...
-	@python -c "import black, isort" 2>/dev/null && (isort email_validator_tool tests && black email_validator_tool tests) || echo "black/isort not available. Run 'make setup-dev' first."
+	@python -m isort email_validator_tool tests backend
+	@python -m black email_validator_tool tests backend
+	@echo Code formatting completed!
 
+# Formatting commands for Windows
+format-windows:
+	@echo Formatting code (Windows)...
+	@python -m isort email_validator_tool tests backend
+	@python -m black email_validator_tool tests backend
+	@echo Code formatting completed!
+
+# Test commands
 test:
 	@echo Running tests...
 	@python -c "import pytest" 2>/dev/null && pytest || echo "pytest not available. Run 'make setup-dev' first."
@@ -93,10 +126,6 @@ dev-backend:
 build:
 	@echo Building Docker containers...
 	docker compose build
-
-test:
-	@echo Running backend tests...
-	pytest -q backend/tests
 
 # Main validation commands (shortcuts)
 v:

@@ -1,4 +1,3 @@
-from app.main import app
 from fastapi.testclient import TestClient
 
 
@@ -20,7 +19,7 @@ def test_validate_emails(client: TestClient):
 
     # Assert response - accept both 200 (success) and 429 (rate limited)
     assert response.status_code in [200, 429]
-    
+
     if response.status_code == 200:
         response_data = response.json()
         assert "results" in response_data

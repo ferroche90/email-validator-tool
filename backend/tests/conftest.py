@@ -54,7 +54,7 @@ def client():
     """FastAPI TestClient with overridden settings for testing."""
     # Set test API token to admin_token_here for admin tests
     os.environ["API_TOKEN"] = "admin_token_here"
-    
+
     with patch("email_validator_tool.config.get_settings") as mock_settings:
         # Override settings for testing
         mock_settings.return_value.ENABLE_DNS_CACHE = False
