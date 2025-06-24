@@ -19,11 +19,14 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python requirements and install
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt ./requirements.txt
+COPY backend/requirements.txt ./backend-requirements.txt
 
-# Copy backend code
-COPY . .
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir -r backend-requirements.txt
+
+# Copy backend application code so that it is importable as top-level "app"
+COPY backend/app ./app
 
 # Copy frontend build from previous stage
 COPY --from=frontend-builder /app/dist ./static
