@@ -85,6 +85,10 @@ jobs:
         pip install -r backend/requirements.txt
         pip install pytest pytest-asyncio
 
+    - name: Install package in development mode
+      run: |
+        pip install -e .
+
     - name: Install frontend dependencies
       run: |
         cd frontend
