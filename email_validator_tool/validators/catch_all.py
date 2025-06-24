@@ -1,11 +1,13 @@
+import asyncio
 import random
 import string
-import asyncio
-import dns.resolver
+
 import aiosmtplib
+import dns.resolver
 from loguru import logger
-from email_validator_tool.core.models import ValidationResult, ValidationStatus
+
 from email_validator_tool.config import get_settings
+from email_validator_tool.core.models import ValidationResult, ValidationStatus
 
 
 def generate_random_string(k: int = 20) -> str:

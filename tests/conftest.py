@@ -3,8 +3,9 @@ Common test fixtures for email validator tests.
 """
 
 import pytest
-from email_validator_tool.core.results import ValidationResult
+
 from email_validator_tool.core.pipeline import ValidationPipeline
+from email_validator_tool.core.results import ValidationResult
 
 
 @pytest.fixture

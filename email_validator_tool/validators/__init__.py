@@ -2,13 +2,7 @@
 Email validation modules.
 """
 
-from . import syntax
-from . import dns_mx
-from . import smtp
-from . import catch_all
-from . import bounce_list
-from . import role_account
-from . import disposable
+from . import bounce_list, catch_all, disposable, dns_mx, role_account, smtp, syntax
 
 __all__ = [
     "syntax",

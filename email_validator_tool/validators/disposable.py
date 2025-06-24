@@ -1,5 +1,6 @@
-from loguru import logger
 from disposable_email_domains import blocklist
+from loguru import logger
+
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
 
 

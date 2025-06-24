@@ -1,14 +1,17 @@
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
-from typing import List
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+
+from email_validator_tool.config import get_settings
+from email_validator_tool.validators.bounce_list import BounceListValidator
+from email_validator_tool.validators.dns_mx import DNSMXValidator
+
 from ..auth import get_current_token
 from ..services.validator_adapter import EmailValidatorService
-from email_validator_tool.validators.dns_mx import DNSMXValidator
-from email_validator_tool.validators.bounce_list import BounceListValidator
-from email_validator_tool.config import get_settings
 
 # Rate limiter setup
 limiter = Limiter(key_func=get_remote_address)

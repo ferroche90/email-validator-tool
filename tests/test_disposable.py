@@ -3,6 +3,7 @@ Tests for the disposable email validator.
 """
 
 import pytest
+
 from email_validator_tool.validators.disposable import DisposableEmailValidator
 
 

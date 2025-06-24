@@ -2,7 +2,9 @@ import csv
 import os
 from pathlib import Path
 from typing import List
+
 from loguru import logger
+
 from email_validator_tool.core.models import ValidationResult
 
 

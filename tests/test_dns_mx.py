@@ -1,8 +1,10 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 from dns.resolver import NXDOMAIN, NoAnswer
-from email_validator_tool.validators.dns_mx import check
+
 from email_validator_tool.models import ValidationStatus
+from email_validator_tool.validators.dns_mx import check
 
 
 @pytest.mark.asyncio

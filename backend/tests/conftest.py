@@ -2,12 +2,14 @@
 Common test fixtures for email validator tests.
 """
 
-import pytest
-from fastapi.testclient import TestClient
 from unittest.mock import patch
-from email_validator_tool.core.results import ValidationResult
-from email_validator_tool.core.pipeline import ValidationPipeline
+
+import pytest
 from app.main import app
+from fastapi.testclient import TestClient
+
+from email_validator_tool.core.pipeline import ValidationPipeline
+from email_validator_tool.core.results import ValidationResult
 
 
 @pytest.fixture

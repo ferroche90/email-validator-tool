@@ -1,9 +1,10 @@
-from email_validator_tool.core.pipeline import ValidationPipeline
-from email_validator_tool.validators.dns_mx import DNSMXValidator
-from email_validator_tool.validators.bounce_list import BounceListValidator
-from email_validator_tool.core.models import ValidationResult, ValidationStatus
-from typing import List, Optional
 import asyncio
+from typing import List, Optional
+
+from email_validator_tool.core.models import ValidationResult, ValidationStatus
+from email_validator_tool.core.pipeline import ValidationPipeline
+from email_validator_tool.validators.bounce_list import BounceListValidator
+from email_validator_tool.validators.dns_mx import DNSMXValidator
 
 
 class EmailValidatorService:

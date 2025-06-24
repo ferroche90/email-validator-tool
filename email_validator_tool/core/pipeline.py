@@ -1,15 +1,17 @@
 import asyncio
 from typing import AsyncGenerator, List, Optional
+
 from loguru import logger
+
 from email_validator_tool.config import get_settings
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
-from email_validator_tool.validators.syntax import SyntaxValidator
-from email_validator_tool.validators.dns_mx import DNSMXValidator
-from email_validator_tool.validators.disposable import DisposableValidator
-from email_validator_tool.validators.role_account import RoleAccountValidator
 from email_validator_tool.validators.bounce_list import BounceListValidator
 from email_validator_tool.validators.catch_all import CatchAllValidator
+from email_validator_tool.validators.disposable import DisposableValidator
+from email_validator_tool.validators.dns_mx import DNSMXValidator
+from email_validator_tool.validators.role_account import RoleAccountValidator
 from email_validator_tool.validators.smtp import SMTPValidator
+from email_validator_tool.validators.syntax import SyntaxValidator
 
 
 class ValidationPipeline:

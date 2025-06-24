@@ -1,8 +1,10 @@
-import sqlite3
 import asyncio
+import sqlite3
 from pathlib import Path
 from typing import Set
+
 from loguru import logger
+
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
 
 DB_PATH = Path("bounce_list.db")

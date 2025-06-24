@@ -3,6 +3,7 @@ Role account validator.
 """
 
 from loguru import logger
+
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
 
 

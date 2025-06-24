@@ -1,6 +1,7 @@
 import pytest
-from email_validator_tool.validators.syntax import check
+
 from email_validator_tool.models import ValidationStatus
+from email_validator_tool.validators.syntax import check
 
 
 @pytest.mark.asyncio

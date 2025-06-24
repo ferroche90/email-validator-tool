@@ -3,6 +3,7 @@ Tests for the catch-all email validator.
 """
 
 import pytest
+
 from email_validator_tool.validators.catch_all import CatchAllValidator
 
 

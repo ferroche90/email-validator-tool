@@ -1,5 +1,7 @@
-from typing import List, Dict
+from typing import Dict, List
+
 from loguru import logger
+
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
 
 
