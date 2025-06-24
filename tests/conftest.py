@@ -4,9 +4,6 @@ Common test fixtures for email validator tests.
 
 import pytest
 
-from email_validator_tool.core.pipeline import ValidationPipeline
-from email_validator_tool.core.results import ValidationResult
-
 
 @pytest.fixture
 def valid_email():
@@ -30,15 +27,3 @@ def disposable_email():
 def role_account_email():
     """Return a role account email address for testing."""
     return "admin@example.com"
-
-
-@pytest.fixture
-def validation_result():
-    """Return a ValidationResult instance for testing."""
-    return ValidationResult()
-
-
-@pytest.fixture
-def validation_pipeline():
-    """Return a ValidationPipeline instance for testing."""
-    return ValidationPipeline(enable_smtp=False, enable_catch_all=False)

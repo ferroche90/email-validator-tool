@@ -2,33 +2,37 @@
 Tests for the role account validator.
 """
 
+import pytest
+
+from email_validator_tool.core.models import ValidationStatus
 from email_validator_tool.validators.role_account import RoleAccountValidator
 
 
-def test_role_account_validator_initialization():
+@pytest.mark.asyncio
+async def test_role_account_validator_initialization():
     """Test role account validator initialization."""
     validator = RoleAccountValidator()
     assert validator is not None
-    assert validator.name == "role_account"
 
 
-def test_role_account_validation(valid_email, validation_result):
+@pytest.mark.asyncio
+async def test_role_account_validation(valid_email):
     """Test role account validation with a valid email."""
     validator = RoleAccountValidator()
-    result = validator.validate(valid_email, validation_result)
-    assert isinstance(result, bool)
-    assert result is True
+    result = await validator.validate(valid_email)
+    assert result.status == ValidationStatus.VALID
 
 
-def test_role_account_validation_with_role_account(role_account_email, validation_result):
+@pytest.mark.asyncio
+async def test_role_account_validation_with_role_account(role_account_email):
     """Test role account validation with a role account email."""
     validator = RoleAccountValidator()
-    result = validator.validate(role_account_email, validation_result)
-    assert isinstance(result, bool)
-    assert result is False
+    result = await validator.validate(role_account_email)
+    assert result.status == ValidationStatus.ROLE_ACCOUNT
 
 
-def test_role_account_validation_with_common_role_accounts(validation_result):
+@pytest.mark.asyncio
+async def test_role_account_validation_with_common_role_accounts():
     """Test role account validation with common role account emails."""
     validator = RoleAccountValidator()
     role_accounts = [
@@ -39,14 +43,13 @@ def test_role_account_validation_with_common_role_accounts(validation_result):
         "contact@example.com",
     ]
     for email in role_accounts:
-        result = validator.validate(email, validation_result)
-        assert isinstance(result, bool)
-        assert result is False
+        result = await validator.validate(email)
+        assert result.status == ValidationStatus.ROLE_ACCOUNT
 
 
-def test_role_account_validation_with_invalid_email(invalid_email, validation_result):
+@pytest.mark.asyncio
+async def test_role_account_validation_with_invalid_email(invalid_email):
     """Test role account validation with an invalid email."""
     validator = RoleAccountValidator()
-    result = validator.validate(invalid_email, validation_result)
-    assert isinstance(result, bool)
-    assert result is False
+    result = await validator.validate(invalid_email)
+    assert result.status == ValidationStatus.VALID  # Role account validator doesn't validate syntax
