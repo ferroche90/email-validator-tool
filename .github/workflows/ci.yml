@@ -46,7 +46,7 @@ jobs:
       run: |
         black --check email_validator_tool tests
         isort --check-only email_validator_tool tests
-        flake8 email_validator_tool tests
+        flake8 email_validator_tool tests --max-line-length=120
 
     - name: Lint frontend code
       run: |
