@@ -28,6 +28,9 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 # Copy backend application code so that it is importable as top-level "app"
 COPY backend/app ./app
 
+# Copy shared library used by backend (main package)
+COPY email_validator_tool ./email_validator_tool
+
 # Copy frontend build from previous stage
 COPY --from=frontend-builder /app/dist ./static
 
