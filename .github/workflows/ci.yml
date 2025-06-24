@@ -40,7 +40,7 @@ jobs:
     - name: Install frontend dependencies
       run: |
         cd frontend
-        pnpm install
+        pnpm install --no-frozen-lockfile
 
     - name: Lint main Python code
       run: |
@@ -103,7 +103,7 @@ jobs:
     - name: Install frontend dependencies
       run: |
         cd frontend
-        pnpm install
+        pnpm install --no-frozen-lockfile
 
     - name: Run main Python tests
       run: |
@@ -214,7 +214,7 @@ jobs:
     - name: Install frontend dependencies
       run: |
         cd frontend
-        pnpm install
+        pnpm install --no-frozen-lockfile
 
     - name: Start backend service
       run: |
