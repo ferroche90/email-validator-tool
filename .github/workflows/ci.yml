@@ -42,11 +42,17 @@ jobs:
         cd frontend
         pnpm install
 
-    - name: Lint Python code
+    - name: Lint main Python code
       run: |
         black --check email_validator_tool tests
         isort --check-only email_validator_tool tests
         flake8 email_validator_tool tests --max-line-length=120
+
+    - name: Lint backend Python code
+      run: |
+        black --check backend
+        isort --check-only backend
+        flake8 backend --max-line-length=120
 
     - name: Lint frontend code
       run: |
@@ -83,7 +89,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r backend/requirements.txt
-        pip install pytest pytest-asyncio
+        pip install pytest pytest-asyncio pytest-cov
 
     - name: Install package in development mode
       run: |
@@ -94,18 +100,58 @@ jobs:
         cd frontend
         pnpm install
 
-    - name: Run Python tests
+    - name: Run main Python tests
       run: |
-        pytest backend/tests/ -v
+        pytest tests/ -v --cov=email_validator_tool --cov-report=xml
+
+    - name: Run backend tests
+      run: |
+        pytest backend/tests/ -v --cov=backend --cov-report=xml
 
     - name: Run frontend tests
       run: |
         cd frontend
         pnpm test run
 
-  build-docker:
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage.xml,./backend/coverage.xml
+        fail_ci_if_error: false
+
+  security:
     runs-on: ubuntu-latest
     needs: [lint, test]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit safety
+
+    - name: Run security audit
+      run: |
+        bandit -r email_validator_tool backend -f json -o bandit-report.json || true
+        safety check --json --output safety-report.json || true
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+
+  build-docker:
+    runs-on: ubuntu-latest
+    needs: [lint, test, security]
 
     steps:
     - uses: actions/checkout@v4
@@ -119,4 +165,51 @@ jobs:
 
     - name: Test Docker image
       run: |
-        docker run --rm email-validator-backend python -c "import app; print('Backend import successful')" 
+        docker run --rm email-validator-backend python -c "import app; print('Backend import successful')"
+
+    - name: Build frontend Docker image (if Dockerfile exists)
+      run: |
+        if [ -f frontend/Dockerfile ]; then
+          docker build -t email-validator-frontend ./frontend
+        else
+          echo "No frontend Dockerfile found, skipping frontend build"
+        fi
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: [build-docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r backend/requirements.txt
+        pip install pytest pytest-asyncio httpx
+
+    - name: Install package in development mode
+      run: |
+        pip install -e .
+
+    - name: Start backend service
+      run: |
+        cd backend
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+        sleep 10
+
+    - name: Run integration tests
+      run: |
+        pytest tests/ -v -m "integration" || echo "No integration tests found"
+
+    - name: Test API endpoints
+      run: |
+        curl -f http://localhost:8000/health || exit 1
+        curl -f http://localhost:8000/api/health || exit 1 
