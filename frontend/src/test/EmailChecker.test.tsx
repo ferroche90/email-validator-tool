@@ -20,7 +20,7 @@ describe('EmailChecker', () => {
       isPending: false,
       error: null,
       data: undefined,
-    })
+    } as any)
 
     render(<EmailChecker />)
 
@@ -34,12 +34,12 @@ describe('EmailChecker', () => {
       isPending: true,
       error: null,
       data: undefined,
-    })
+    } as any)
 
     render(<EmailChecker />)
 
     expect(screen.getByText(/Validating.../i)).toBeInTheDocument()
-    expect(screen.getByRole('button')).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Validating.../i })).toBeDisabled()
   })
 
   it('should display error message when validation fails', () => {
@@ -49,7 +49,7 @@ describe('EmailChecker', () => {
       isPending: false,
       error: mockError,
       data: undefined,
-    })
+    } as any)
 
     render(<EmailChecker />)
 
@@ -70,7 +70,7 @@ describe('EmailChecker', () => {
       isPending: false,
       error: null,
       data: mockData,
-    })
+    } as any)
 
     render(<EmailChecker />)
 
@@ -99,7 +99,7 @@ describe('EmailChecker', () => {
       isPending: false,
       error: null,
       data: undefined,
-    })
+    } as any)
 
     render(<EmailChecker />)
 
@@ -127,7 +127,7 @@ describe('EmailChecker', () => {
       isPending: false,
       error: null,
       data: undefined,
-    })
+    } as any)
 
     render(<EmailChecker />)
 
@@ -152,7 +152,7 @@ describe('EmailChecker', () => {
       isPending: false,
       error: null,
       data: undefined,
-    })
+    } as any)
 
     render(<EmailChecker />)
 
@@ -192,7 +192,7 @@ describe('EmailChecker', () => {
       isPending: false,
       error: null,
       data: mockData,
-    })
+    } as any)
 
     render(<EmailChecker />)
 
@@ -205,7 +205,7 @@ describe('EmailChecker', () => {
       isPending: false,
       error: null,
       data: undefined,
-    })
+    } as any)
 
     render(<EmailChecker />)
 

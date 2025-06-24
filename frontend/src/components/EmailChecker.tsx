@@ -2,12 +2,7 @@ import { useState } from 'react'
 import { ArrowPathIcon, Cog6ToothIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline'
 import { useValidateEmails } from '../lib/useValidateEmails'
 import clsx from 'clsx'
-
-interface ValidationResult {
-  email: string
-  status: string
-  details?: string
-}
+import type { ValidationResult, ValidateResponse } from '../types'
 
 export const EmailChecker = () => {
   const [emails, setEmails] = useState('')
@@ -16,6 +11,8 @@ export const EmailChecker = () => {
   const [enableCatchAll, setEnableCatchAll] = useState(false)
   
   const { mutate, isPending, error, data } = useValidateEmails()
+  const validationData = data as ValidateResponse | undefined
+  const typedError = error as Error | null
 
   const handleValidate = () => {
     const emailList = emails
@@ -33,11 +30,11 @@ export const EmailChecker = () => {
   }
 
   const handleDownloadCSV = () => {
-    if (!data?.results) return
+    if (!validationData?.results) return
 
     const csvContent = [
       'Email,Status,Details',
-      ...data.results.map((result: ValidationResult) => 
+      ...validationData.results.map((result: ValidationResult) => 
         `"${result.email}","${result.status}","${result.details || ''}"`
       )
     ].join('\n')
@@ -80,10 +77,11 @@ export const EmailChecker = () => {
         
         {/* Email Input */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="email-input" className="block text-sm font-medium text-gray-700 mb-2">
             Email Addresses (one per line)
           </label>
           <textarea
+            id="email-input"
             value={emails}
             onChange={(e) => setEmails(e.target.value)}
             placeholder="Enter email addresses here...&#10;example@domain.com&#10;test@example.org"
@@ -143,15 +141,15 @@ export const EmailChecker = () => {
         </button>
 
         {/* Error Display */}
-        {error && (
+        {typedError && (
           <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            Error: {error.message}
+            Error: {typedError.message}
           </div>
         )}
       </div>
 
       {/* Results Table */}
-      {data?.results && (
+      {validationData?.results && (
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-xl font-semibold">Validation Results</h3>
@@ -180,7 +178,7 @@ export const EmailChecker = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {data.results.map((result: ValidationResult, index: number) => (
+                {validationData.results.map((result: ValidationResult, index: number) => (
                   <tr key={index}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {result.email}
@@ -194,7 +192,7 @@ export const EmailChecker = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
-                      {result.details || '-'}
+                      {result.details ?? '-'}
                     </td>
                   </tr>
                 ))}

@@ -1,7 +1,7 @@
 export interface ValidationResult {
   email: string
   status: string
-  details?: string
+  details?: string | null
 }
 
 export interface ValidateRequest {
