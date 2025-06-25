@@ -4,69 +4,8 @@ Role account validator.
 
 from loguru import logger
 
+from email_validator_tool.constants import COMMON_ROLE_ACCOUNTS
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
-
-
-def is_role_account(email: str) -> bool:
-    """Check if an email address is a role account."""
-    common_roles = {
-        "admin",
-        "administrator",
-        "webmaster",
-        "hostmaster",
-        "postmaster",
-        "info",
-        "support",
-        "sales",
-        "contact",
-        "help",
-        "helpdesk",
-        "noreply",
-        "no-reply",
-        "no_reply",
-        "donotreply",
-        "do-not-reply",
-        "mail",
-        "mailer-daemon",
-        "abuse",
-        "security",
-        "marketing",
-        "feedback",
-        "service",
-        "services",
-        "team",
-        "office",
-        "staff",
-        "jobs",
-        "careers",
-        "recruitment",
-        "hr",
-        "human.resources",
-        "billing",
-        "accounts",
-        "accounting",
-        "finance",
-        "legal",
-        "privacy",
-        "press",
-        "media",
-        "marketing",
-        "advertising",
-        "news",
-        "newsletter",
-        "subscribe",
-        "unsubscribe",
-        "welcome",
-        "hello",
-        "hi",
-        "test",
-        "demo",
-        "example",
-        "sample",
-    }
-
-    local_part = email.split("@")[0].lower()
-    return local_part in common_roles
 
 
 class RoleAccountValidator:
@@ -74,28 +13,7 @@ class RoleAccountValidator:
 
     def __init__(self):
         """Initialize the validator"""
-        self.role_accounts = {
-            "admin",
-            "administrator",
-            "webmaster",
-            "hostmaster",
-            "postmaster",
-            "info",
-            "support",
-            "help",
-            "contact",
-            "sales",
-            "marketing",
-            "noreply",
-            "no-reply",
-            "donotreply",
-            "do-not-reply",
-            "abuse",
-            "security",
-            "spam",
-            "feedback",
-            "mailer-daemon",
-        }
+        pass
 
     async def validate(self, email: str) -> ValidationResult:
         """
@@ -111,7 +29,7 @@ class RoleAccountValidator:
             local_part = email.split("@")[0].lower()
             logger.debug(f"Checking if {local_part} is a role account")
 
-            if local_part in self.role_accounts:
+            if local_part in COMMON_ROLE_ACCOUNTS:
                 logger.warning(f"Email {email} is a role account")
                 return ValidationResult(
                     email=email,

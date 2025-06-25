@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     def _load_environment_file(self):
         """Load environment-specific .env file based on ENVIRONMENT variable"""
         from dotenv import load_dotenv
-        
+
         # Get environment from OS-level variable first, then default to dev
         environment = os.getenv("ENVIRONMENT", "dev")
         
