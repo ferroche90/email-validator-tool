@@ -38,8 +38,9 @@ def get_validator_service() -> EmailValidatorService:
 
 def verify_admin_token(token: str = Depends(get_current_token)) -> str:
     """Verify admin token for administrative endpoints"""
-    # Simple admin token check - in production, use proper JWT validation
-    if token != "admin_token_here":  # Replace with actual admin token
+    # Get admin token from settings
+    settings = get_settings()
+    if token != settings.ADMIN_TOKEN:
         raise HTTPException(status_code=403, detail="Admin access required")
     return token
 

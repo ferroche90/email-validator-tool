@@ -98,21 +98,41 @@ email-validator-tool/
    cd email-validator
    ```
 
-2. **Install Python dependencies**
+2. **Set up environment files (choose one option):**
+   
+   **Option A: Use the setup script (recommended)**
+   ```bash
+   # Linux/Mac
+   chmod +x setup-env.sh && ./setup-env.sh
+   
+   # Windows
+   setup-env.bat
+   ```
+   
+   **Option B: Manual setup**
+   ```bash
+   # Backend environment
+   cp infra/env/dev.example.env .env.dev
+   
+   # Frontend environment
+   cp infra/env/frontend.example.env frontend/.env
+   ```
+
+3. **Install Python dependencies**
    ```bash
    pip install -r requirements.txt
    # All dependencies are now consolidated in a single file
    # (no need to install backend/requirements.txt separately)
    ```
 
-3. **Install frontend dependencies**
+4. **Install frontend dependencies**
    ```bash
    cd frontend
    pnpm install
    cd ..
    ```
 
-4. **Start development servers**
+5. **Start development servers**
    ```bash
    # Start both frontend and backend
    make dev
@@ -174,11 +194,82 @@ make vfull ARGS='input.csv output.csv'
 
 ## 🔧 Configuration
 
-### Environment Variables
+### Environment Configuration
 
-Create a `.env` file in the project root:
+The application supports separate development and production environments with automatic configuration loading.
 
+#### Quick Setup
+
+1. **Backend/CLI Environment:**
+   ```bash
+   # For Development
+   cp infra/env/dev.example.env .env.dev
+   
+   # For Production
+   cp infra/env/prod.example.env .env.prod
+   # Edit .env.prod with your secure production values
+   ```
+
+2. **Frontend Environment:**
+   ```bash
+   # For Development
+   cp infra/env/frontend.example.env frontend/.env
+   
+   # For Production
+   cp infra/env/frontend.prod.example.env frontend/.env
+   # Edit frontend/.env with your secure production values
+   ```
+
+3. **Switch Environment:**
+   ```bash
+   # Development (default)
+   ENVIRONMENT=dev make dev
+   
+   # Production
+   ENVIRONMENT=prod make dev
+   ```
+
+#### Environment Files Structure
+
+**Backend/CLI (Root Directory):**
+- **`infra/env/dev.example.env`** - Development template with dummy values
+- **`infra/env/prod.example.env`** - Production template with placeholders
+- **`.env.dev`** - Your local development configuration (not committed to git)
+- **`.env.prod`** - Your production configuration (not committed to git)
+
+**Frontend (frontend/ Directory):**
+- **`infra/env/frontend.example.env`** - Development template with dummy values
+- **`infra/env/frontend.prod.example.env`** - Production template with placeholders
+- **`frontend/.env`** - Your frontend configuration (not committed to git)
+
+#### Configuration Priority
+
+**Backend/CLI:**
+1. **OS Environment Variables** (highest priority)
+2. **`.env.{ENVIRONMENT}`** file (e.g., `.env.dev` or `.env.prod`)
+3. **`.env`** file (fallback)
+4. **Default values** (lowest priority)
+
+**Frontend:**
+1. **OS Environment Variables** (highest priority)
+2. **`frontend/.env`** file
+3. **Default values** (lowest priority)
+
+#### Production Safety
+
+- **DEBUG mode is automatically disabled** in production
+- **Running with `ENVIRONMENT=prod DEBUG=true` will abort** with a clear error
+- **All sensitive values must be changed** from placeholder values
+- **Frontend and backend tokens must match** for authentication to work
+
+#### Available Settings
+
+**Backend/CLI Settings:**
 ```env
+# Environment
+ENVIRONMENT=dev|prod
+DEBUG=true|false
+
 # API Configuration
 API_TOKEN=your_secure_api_token_here
 ADMIN_TOKEN=your_secure_admin_token_here
@@ -187,7 +278,7 @@ ADMIN_TOKEN=your_secure_admin_token_here
 DATABASE_URL=sqlite:///app.db
 
 # Logging
-LOG_LEVEL=INFO
+LOG_LEVEL=DEBUG|INFO|WARNING|ERROR
 
 # CORS
 CORS_ORIGINS=*
@@ -196,27 +287,40 @@ CORS_ORIGINS=*
 RATE_LIMIT_PER_MINUTE=60
 
 # DNS Cache
-ENABLE_DNS_CACHE=True
+ENABLE_DNS_CACHE=True|False
 DNS_CACHE_TTL_SECONDS=3600
 
 # SMTP Configuration
 SMTP_TIMEOUT=10
+SMTP_PORT=25
 MAX_CONCURRENT_CONNECTIONS=10
 PER_DOMAIN_DELAY_SECONDS=5.0
 
 # Validation Options
 ENABLE_CATCH_ALL=False
 ENABLE_SMTP=False
+
+# Validation thresholds
+MIN_MX_RECORDS=1
+MAX_BOUNCE_RATE=0.1
+
+# General parameters
+CSV_INPUT_PATH=emails.csv
+CSV_OUTPUT_PATH=results.csv
 ```
 
-### Frontend Configuration
-
-Create a `.env` file in the `frontend/` directory:
-
+**Frontend Settings:**
 ```env
+# API Configuration
 VITE_API_URL=http://localhost:8000
 VITE_API_TOKEN=your_api_token_here
 ```
+
+#### Important Notes
+
+- **Token Matching**: The `VITE_API_TOKEN` in `frontend/.env` must match the `API_TOKEN` in your backend `.env.dev` or `.env.prod` file
+- **VITE_ Prefix**: Only environment variables prefixed with `VITE_` are available to the frontend
+- **File Locations**: Backend env files go in the root, frontend env files go in the `frontend/` directory
 
 ## 🐳 Docker Deployment
 
