@@ -39,10 +39,6 @@ class Settings(BaseSettings):
     ENABLE_CATCH_ALL: bool = Field(default=False, description="Enable catch-all detection")
     ENABLE_SMTP: bool = Field(default=False, description="Enable SMTP verification")
 
-    # Validation thresholds
-    MIN_MX_RECORDS: int = Field(default=1, description="Minimum MX records required")
-    MAX_BOUNCE_RATE: float = Field(default=0.1, description="Maximum bounce rate threshold")
-
     # General parameters
     CSV_INPUT_PATH: str = Field(default="emails.csv", description="Default CSV input path")
     CSV_OUTPUT_PATH: str = Field(default="results.csv", description="Default CSV output path")

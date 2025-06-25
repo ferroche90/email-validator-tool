@@ -120,8 +120,3 @@ async def get_bounce_stats(request: Request, admin_token: str = Depends(verify_a
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting bounce stats: {str(e)}")
-
-
-@router.get("/health")
-async def health_check():
-    return {"status": "ok"}
