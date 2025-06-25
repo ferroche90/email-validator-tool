@@ -4,6 +4,7 @@ Common test fixtures for email validator tests.
 
 import os
 from unittest.mock import patch
+import time
 
 import pytest
 from app.main import app
@@ -94,3 +95,23 @@ def client():
                 key_manager._save_keys()
             
             yield test_client
+
+
+def get_token_safely(client: TestClient, api_key: str, max_retries: int = 3):
+    """Safely retrieve a JWT token from the API, retrying if rate limited."""
+    for attempt in range(max_retries):
+        response = client.post("/api/token", json={"api_key": api_key})
+
+        if response.status_code == 200:
+            return response.json()["access_token"]
+        elif response.status_code == 429:  # Rate limited
+            if attempt < max_retries - 1:
+                time.sleep(1)  # Wait 1 second before retrying
+                continue
+            pytest.skip("Rate limited after retries")
+        else:
+            pytest.fail(
+                f"Token request failed with status {response.status_code}: {response.text}"
+            )
+
+    pytest.fail("Failed to obtain token after all retries")

@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from .conftest import get_token_safely
 
 
 def test_validate_emails(client: TestClient):

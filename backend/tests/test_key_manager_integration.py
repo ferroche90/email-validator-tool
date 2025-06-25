@@ -10,6 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from .conftest import get_token_safely
 from email_validator_tool.key_manager import KeyManager
 
 
