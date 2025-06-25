@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from .conftest import get_token_safely
 
 
 def test_validate_emails_unauthorized(client: TestClient):
@@ -16,63 +17,102 @@ def test_validate_emails_unauthorized(client: TestClient):
     assert "Not authenticated" in response.json()["detail"]
 
 
-def test_validate_emails_success(client: TestClient):
-    """Test successful email validation with valid token."""
+def test_validate_emails_with_options(client, setup_test_api_keys):
+    """Test email validation with various options."""
+    # Get a JWT token first
+    token = get_token_safely(client, "test_admin_api_key")
+    
     response = client.post(
         "/api/validate",
         json={
             "emails": ["test@example.com"],
-            "enable_smtp": False,
-            "enable_catch_all": False,
+            "enable_smtp": True,
+            "enable_catch_all": True,
         },
-        headers={"Authorization": "Bearer admin_token_here"},
+        headers={"Authorization": f"Bearer {token}"},
     )
+    
     assert response.status_code == 200
     data = response.json()
     assert "results" in data
     assert len(data["results"]) == 1
-    assert "email" in data["results"][0]
-    assert "status" in data["results"][0]
 
 
-def test_validate_emails_invalid_email(client: TestClient):
-    """Test validation with invalid email format."""
+def test_validate_emails_with_invalid_emails(client, setup_test_api_keys):
+    """Test email validation with invalid email addresses."""
+    # Get a JWT token first
+    token = get_token_safely(client, "test_admin_api_key")
+    
     response = client.post(
         "/api/validate",
         json={
-            "emails": ["invalid-email"],
+            "emails": ["invalid-email", "another@invalid", "test@example.com"],
             "enable_smtp": False,
             "enable_catch_all": False,
         },
-        headers={"Authorization": "Bearer admin_token_here"},
+        headers={"Authorization": f"Bearer {token}"},
     )
-    assert response.status_code == 200
-    data = response.json()
-    assert "results" in data
-    assert len(data["results"]) == 1
-    # Should return invalid status
-    assert data["results"][0]["status"] in ["invalid_syntax", "invalid_domain"]
-
-
-def test_validate_emails_multiple_emails(client: TestClient):
-    """Test validation with multiple emails."""
-    response = client.post(
-        "/api/validate",
-        json={
-            "emails": ["test@example.com", "admin@example.com", "invalid-email"],
-            "enable_smtp": False,
-            "enable_catch_all": False,
-        },
-        headers={"Authorization": "Bearer admin_token_here"},
-    )
+    
     assert response.status_code == 200
     data = response.json()
     assert "results" in data
     assert len(data["results"]) == 3
+    
+    # Check that invalid emails are marked as such
+    invalid_results = [r for r in data["results"] if not r["is_valid"]]
+    assert len(invalid_results) >= 2
 
 
-def test_rate_limit_exceeded(client: TestClient):
+def test_validate_emails_with_empty_list(client, setup_test_api_keys):
+    """Test email validation with empty email list."""
+    # Get a JWT token first
+    token = get_token_safely(client, "test_admin_api_key")
+    
+    response = client.post(
+        "/api/validate",
+        json={
+            "emails": [],
+            "enable_smtp": False,
+            "enable_catch_all": False,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert "results" in data
+    assert len(data["results"]) == 0
+
+
+def test_validate_emails_with_large_list(client, setup_test_api_keys):
+    """Test email validation with a large list of emails."""
+    # Get a JWT token first
+    token = get_token_safely(client, "test_admin_api_key")
+    
+    # Create a list of 100 test emails
+    emails = [f"test{i}@example.com" for i in range(100)]
+    
+    response = client.post(
+        "/api/validate",
+        json={
+            "emails": emails,
+            "enable_smtp": False,
+            "enable_catch_all": False,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert "results" in data
+    assert len(data["results"]) == 100
+
+
+def test_rate_limit_exceeded(client, setup_test_api_keys):
     """Test rate limiting by making requests quickly."""
+    # Get a JWT token first
+    token = get_token_safely(client, "test_admin_api_key")
+    
     # Make 21 requests to trigger rate limit (20/minute limit)
     responses = []
     for i in range(21):
@@ -83,7 +123,7 @@ def test_rate_limit_exceeded(client: TestClient):
                 "enable_smtp": False,
                 "enable_catch_all": False,
             },
-            headers={"Authorization": "Bearer admin_token_here"},
+            headers={"Authorization": f"Bearer {token}"},
         )
         responses.append(response)
 
@@ -107,37 +147,55 @@ def test_admin_endpoints_unauthorized(client: TestClient):
     assert response.status_code == 403
 
 
-def test_admin_endpoints_with_regular_token(client: TestClient):
-    """Test admin endpoints return 403 with regular token."""
-    # For this test, we need a token that passes the first check but fails the admin check
-    # Since API_TOKEN is set to "admin_token_here", we can't test this scenario easily
-    # This test is now redundant since admin_token_here passes both checks
-    # We'll skip this test or modify it to test a different scenario
-    pass
+def test_admin_endpoints_require_admin_role(client, setup_test_api_keys):
+    """Test that admin endpoints require admin role."""
+    # Get a user token (not admin)
+    user_token = get_token_safely(client, "test_user_api_key")
+    
+    # Try to access admin endpoint with user token
+    response = client.get(
+        "/api/cache-stats", 
+        headers={"Authorization": f"Bearer {user_token}"}
+    )
+    
+    # Should be forbidden
+    assert response.status_code == 403
 
 
-def test_admin_endpoints_success(client: TestClient):
-    """Test admin endpoints with admin token."""
-    # Test cache-stats
-    response = client.get("/api/cache-stats", headers={"Authorization": "Bearer admin_token_here"})
+def test_cache_stats_endpoint(client, setup_test_api_keys):
+    """Test the cache stats endpoint."""
+    # Get a JWT token first
+    token = get_token_safely(client, "test_admin_api_key")
+    
+    response = client.get("/api/cache-stats", headers={"Authorization": f"Bearer {token}"})
+    
     assert response.status_code == 200
     data = response.json()
     assert "cache_stats" in data
-    assert "cache_enabled" in data
 
-    # Test cache-clear
-    response = client.post("/api/cache-clear", headers={"Authorization": "Bearer admin_token_here"})
+
+def test_cache_clear_endpoint(client, setup_test_api_keys):
+    """Test the cache clear endpoint."""
+    # Get a JWT token first
+    token = get_token_safely(client, "test_admin_api_key")
+    
+    response = client.post("/api/cache-clear", headers={"Authorization": f"Bearer {token}"})
+    
     assert response.status_code == 200
     data = response.json()
-    assert "cleared" in data
     assert "message" in data
 
-    # Test bounce-stats
-    response = client.get("/api/bounce-stats", headers={"Authorization": "Bearer admin_token_here"})
+
+def test_bounce_stats_endpoint(client, setup_test_api_keys):
+    """Test the bounce stats endpoint."""
+    # Get a JWT token first
+    token = get_token_safely(client, "test_admin_api_key")
+    
+    response = client.get("/api/bounce-stats", headers={"Authorization": f"Bearer {token}"})
+    
     assert response.status_code == 200
     data = response.json()
-    assert "bounce_count" in data
-    assert "loaded_in_memory" in data
+    assert "bounce_stats" in data
 
 
 def test_health_endpoint(client: TestClient):

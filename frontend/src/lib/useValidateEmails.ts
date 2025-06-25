@@ -10,31 +10,43 @@ const createApi = () => axios.create({
   },
 })
 
-// Add request interceptor for Authorization
-const addAuthInterceptor = (api: ReturnType<typeof axios.create>) => {
-  api.interceptors.request.use((config) => {
-    const token = import.meta.env.VITE_API_TOKEN
-    if (token && token.trim() !== '') {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-  })
-}
-
 // Email validation mutation function
-const validateEmails = async (request: ValidateRequest, api?: ReturnType<typeof axios.create>): Promise<ValidateResponse> => {
-  const apiInstance = api || createApi()
-  if (!api) {
-    addAuthInterceptor(apiInstance)
+const validateEmails = async (request: ValidateRequest): Promise<ValidateResponse> => {
+  const apiInstance = createApi()
+  
+  // Get JWT token from useAuth hook's getToken function
+  // We'll get the token from the global auth state instead of duplicating logic
+  const apiKey = import.meta.env.VITE_API_KEY
+  if (!apiKey) {
+    throw new Error('VITE_API_KEY environment variable is required')
   }
-  const response = await apiInstance.post<ValidateResponse>('/api/validate', request)
-  return response.data
+
+  try {
+    // Get JWT token first
+    const tokenResponse = await apiInstance.post<{ access_token: string }>('/api/token', { api_key: apiKey })
+    const jwtToken = tokenResponse.data.access_token
+    
+    if (!jwtToken || typeof jwtToken !== 'string') {
+      throw new Error('Invalid token received from server')
+    }
+
+    // Add authorization header for the validation request
+    const response = await apiInstance.post<ValidateResponse>('/api/validate', request, {
+      headers: {
+        'Authorization': `Bearer ${jwtToken}`
+      }
+    })
+    return response.data
+  } catch (error) {
+    console.error('Email validation error:', error)
+    throw error
+  }
 }
 
 // React Query hook for email validation
-export const useValidateEmails = (api?: ReturnType<typeof axios.create>) => {
+export const useValidateEmails = () => {
   return useMutation({
-    mutationFn: (request: ValidateRequest) => validateEmails(request, api),
+    mutationFn: (request: ValidateRequest) => validateEmails(request),
     onError: (error: Error | unknown) => {
       console.error('Email validation error:', error)
     },

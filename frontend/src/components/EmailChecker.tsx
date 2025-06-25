@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { ArrowPathIcon, Cog6ToothIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, Cog6ToothIcon, DocumentArrowDownIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { useValidateEmails } from '../lib/useValidateEmails'
+import { useAuth } from '../lib/useAuth'
 import clsx from 'clsx'
 import type { ValidationResult, ValidateResponse } from '../types'
 
@@ -10,6 +11,7 @@ export const EmailChecker = () => {
   const [enableSmtp, setEnableSmtp] = useState(false)
   const [enableCatchAll, setEnableCatchAll] = useState(false)
   
+  const { isAuthenticated, isLoading: authLoading, error: authError, refreshToken } = useAuth()
   const { mutate, isPending, error, data } = useValidateEmails()
   const validationData = data as ValidateResponse | undefined
   const typedError = error as Error | null
@@ -70,8 +72,51 @@ export const EmailChecker = () => {
     }
   }
 
+  // Show loading state while authenticating
+  if (authLoading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-white rounded-lg shadow-md p-6 text-center">
+          <ArrowPathIcon className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600">Authenticating...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show authentication error
+  if (authError) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg shadow-md p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <ExclamationTriangleIcon className="w-6 h-6 text-red-600" />
+            <h2 className="text-xl font-semibold text-red-800">Authentication Error</h2>
+          </div>
+          <p className="text-red-700 mb-4">{authError}</p>
+          <button
+            onClick={refreshToken}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            Retry Authentication
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
+      {/* Authentication Status */}
+      {isAuthenticated && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+            <span className="text-green-800 font-medium">Authenticated with JWT</span>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-2xl font-bold mb-4">Email Validator</h2>
         
@@ -126,10 +171,10 @@ export const EmailChecker = () => {
         {/* Validate Button */}
         <button
           onClick={handleValidate}
-          disabled={isPending || !emails.trim()}
+          disabled={isPending || !emails.trim() || !isAuthenticated}
           className={clsx(
             "flex items-center gap-2 px-4 py-2 rounded-md font-medium",
-            isPending || !emails.trim()
+            isPending || !emails.trim() || !isAuthenticated
               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
               : "bg-blue-600 text-white hover:bg-blue-700"
           )}

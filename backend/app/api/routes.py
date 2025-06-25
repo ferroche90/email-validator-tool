@@ -1,15 +1,17 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from email_validator_tool.config import get_settings
+from email_validator_tool.key_manager import create_key_manager
 from email_validator_tool.validators.bounce_list import BounceListValidator
 from email_validator_tool.validators.dns_mx import DNSMXValidator
 
-from ..auth import get_current_token
+from app.auth.base import get_current_user_with_key_manager, require_role_hybrid
+from app.auth.jwt import create_access_token
 from ..services.validator_adapter import EmailValidatorService
 
 # Rate limiter setup
@@ -31,18 +33,50 @@ class ValidateRequest(BaseModel):
     enable_catch_all: bool = False
 
 
+class TokenRequest(BaseModel):
+    api_key: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    role: str
+
+
 def get_validator_service() -> EmailValidatorService:
     """Dependency to inject EmailValidatorService with global validator instances"""
     return EmailValidatorService(dns_validator=_global_dns_validator, bounce_validator=_global_bounce_validator)
 
 
-def verify_admin_token(token: str = Depends(get_current_token)) -> str:
-    """Verify admin token for administrative endpoints"""
-    # Get admin token from settings
-    settings = get_settings()
-    if token != settings.ADMIN_TOKEN:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return token
+@router.post("/token", response_model=TokenResponse)
+@limiter.limit("100/minute")
+async def create_token(request: Request, token_request: TokenRequest):
+    """
+    Create a JWT access token using a pre-provisioned API key.
+    Rate limited to 100 requests per minute per IP.
+    """
+    # Try to validate the API key using the key manager
+    key_manager = create_key_manager()
+    role = key_manager.validate_key(token_request.api_key)
+    
+    if not role:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or revoked API key"
+        )
+    
+    # Create token payload
+    payload = {
+        "sub": f"{role}_user",
+        "role": role
+    }
+    
+    access_token = create_access_token(payload)
+    
+    return TokenResponse(
+        access_token=access_token,
+        role=role
+    )
 
 
 @router.post("/validate")
@@ -51,7 +85,7 @@ async def validate_emails(
     request: Request,
     body: ValidateRequest,
     validator_service: EmailValidatorService = Depends(get_validator_service),
-    token: str = Depends(get_current_token),
+    user: dict = Depends(get_current_user_with_key_manager),
 ):
     """
     Validate a list of email addresses.
@@ -71,7 +105,7 @@ async def validate_emails(
 
 @router.get("/cache-stats")
 @limiter.limit("5/minute")
-async def get_cache_stats(request: Request, admin_token: str = Depends(verify_admin_token)):
+async def get_cache_stats(request: Request, user: dict = Depends(require_role_hybrid("admin"))):
     """
     Get DNS cache statistics.
     Admin access required. Rate limited to 5 requests per minute.
@@ -89,7 +123,7 @@ async def get_cache_stats(request: Request, admin_token: str = Depends(verify_ad
 
 @router.post("/cache-clear")
 @limiter.limit("5/minute")
-async def clear_cache(request: Request, admin_token: str = Depends(verify_admin_token)):
+async def clear_cache(request: Request, user: dict = Depends(require_role_hybrid("admin"))):
     """
     Clear DNS cache.
     Admin access required. Rate limited to 5 requests per minute.
@@ -106,7 +140,7 @@ async def clear_cache(request: Request, admin_token: str = Depends(verify_admin_
 
 @router.get("/bounce-stats")
 @limiter.limit("5/minute")
-async def get_bounce_stats(request: Request, admin_token: str = Depends(verify_admin_token)):
+async def get_bounce_stats(request: Request, user: dict = Depends(require_role_hybrid("admin"))):
     """
     Get bounce list statistics.
     Admin access required. Rate limited to 5 requests per minute.

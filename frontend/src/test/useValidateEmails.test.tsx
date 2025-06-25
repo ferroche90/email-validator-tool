@@ -3,6 +3,11 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useValidateEmails } from '../lib/useValidateEmails'
+import axios from 'axios'
+
+// Mock axios
+vi.mock('axios')
+const mockedAxios = vi.mocked(axios)
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -20,10 +25,19 @@ const createWrapper = () => {
 describe('useValidateEmails', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Mock environment variables
+    vi.stubEnv('VITE_API_KEY', 'test_api_key')
+    vi.stubEnv('VITE_API_URL', 'http://localhost:8000')
   })
 
   it('should handle successful validation', async () => {
-    const mockResponse = {
+    const mockTokenResponse = {
+      data: {
+        access_token: 'mock_jwt_token'
+      }
+    }
+    
+    const mockValidationResponse = {
       data: {
         results: [
           { email: 'test@example.com', status: 'valid', details: null },
@@ -32,16 +46,15 @@ describe('useValidateEmails', () => {
       },
     }
 
-    const mockApi = {
-      post: vi.fn().mockResolvedValue(mockResponse),
-      interceptors: {
-        request: {
-          use: vi.fn(),
-        },
-      },
-    } as any
+    // Mock axios.create to return a mock instance
+    const mockAxiosInstance = {
+      post: vi.fn()
+        .mockResolvedValueOnce(mockTokenResponse) // First call for token
+        .mockResolvedValueOnce(mockValidationResponse), // Second call for validation
+    }
+    ;(mockedAxios.create as any).mockReturnValue(mockAxiosInstance)
 
-    const { result } = renderHook(() => useValidateEmails(mockApi), {
+    const { result } = renderHook(() => useValidateEmails(), {
       wrapper: createWrapper(),
     })
 
@@ -59,28 +72,45 @@ describe('useValidateEmails', () => {
     })
 
     await waitFor(() => {
-      expect(result.current.data).toEqual(mockResponse.data)
+      expect(result.current.data).toEqual(mockValidationResponse.data)
     })
     expect(result.current.error).toBeNull()
+    
+    // Verify the API calls
+    expect(mockAxiosInstance.post).toHaveBeenCalledTimes(2)
+    expect(mockAxiosInstance.post).toHaveBeenNthCalledWith(1, '/api/token', { api_key: 'test_api_key' })
+    expect(mockAxiosInstance.post).toHaveBeenNthCalledWith(2, '/api/validate', {
+      emails: ['test@example.com', 'invalid@email'],
+      enable_smtp: false,
+      enable_catch_all: false,
+    }, {
+      headers: {
+        'Authorization': 'Bearer mock_jwt_token'
+      }
+    })
   })
 
   it('should handle loading state', async () => {
-    // Create a promise that doesn't resolve immediately
-    let resolvePromise: (value: { data: { results: Array<{ email: string; status: string }> } }) => void
-    const pendingPromise = new Promise((resolve) => {
-      resolvePromise = resolve
+    // Create promises that don't resolve immediately
+    let resolveTokenPromise: (value: { data: { access_token: string } }) => void
+    let resolveValidationPromise: (value: { data: { results: Array<{ email: string; status: string }> } }) => void
+    
+    const pendingTokenPromise = new Promise((resolve) => {
+      resolveTokenPromise = resolve
     })
     
-    const mockApi = {
-      post: vi.fn().mockReturnValue(pendingPromise),
-      interceptors: {
-        request: {
-          use: vi.fn(),
-        },
-      },
-    } as any
+    const pendingValidationPromise = new Promise((resolve) => {
+      resolveValidationPromise = resolve
+    })
+    
+    const mockAxiosInstance = {
+      post: vi.fn()
+        .mockReturnValueOnce(pendingTokenPromise)
+        .mockReturnValueOnce(pendingValidationPromise),
+    }
+    ;(mockedAxios.create as any).mockReturnValue(mockAxiosInstance)
 
-    const { result } = renderHook(() => useValidateEmails(mockApi), {
+    const { result } = renderHook(() => useValidateEmails(), {
       wrapper: createWrapper(),
     })
 
@@ -98,9 +128,10 @@ describe('useValidateEmails', () => {
       expect(result.current.isPending).toBe(true)
     })
 
-    // Resolve the promise
+    // Resolve the promises
     act(() => {
-      resolvePromise!({
+      resolveTokenPromise!({ data: { access_token: 'mock_jwt_token' } })
+      resolveValidationPromise!({
         data: {
           results: [{ email: 'test@example.com', status: 'valid' }],
         },
@@ -114,16 +145,13 @@ describe('useValidateEmails', () => {
 
   it('should handle error state', async () => {
     const mockError = new Error('Network error')
-    const mockApi = {
+    
+    const mockAxiosInstance = {
       post: vi.fn().mockRejectedValue(mockError),
-      interceptors: {
-        request: {
-          use: vi.fn(),
-        },
-      },
-    } as any
+    }
+    ;(mockedAxios.create as any).mockReturnValue(mockAxiosInstance)
 
-    const { result } = renderHook(() => useValidateEmails(mockApi), {
+    const { result } = renderHook(() => useValidateEmails(), {
       wrapper: createWrapper(),
     })
 
@@ -153,16 +181,13 @@ describe('useValidateEmails', () => {
         data: { detail: 'Internal server error' },
       },
     }
-    const mockApi = {
+    
+    const mockAxiosInstance = {
       post: vi.fn().mockRejectedValue(mockError),
-      interceptors: {
-        request: {
-          use: vi.fn(),
-        },
-      },
-    } as any
+    }
+    ;(mockedAxios.create as any).mockReturnValue(mockAxiosInstance)
 
-    const { result } = renderHook(() => useValidateEmails(mockApi), {
+    const { result } = renderHook(() => useValidateEmails(), {
       wrapper: createWrapper(),
     })
 
@@ -180,5 +205,32 @@ describe('useValidateEmails', () => {
     })
 
     expect(result.current.error).toBeDefined()
+  })
+
+  it('should handle missing API key', async () => {
+    // Remove the API key from environment
+    vi.unstubAllEnvs()
+    
+    const { result } = renderHook(() => useValidateEmails(), {
+      wrapper: createWrapper(),
+    })
+
+    // Test mutation
+    act(() => {
+      result.current.mutate({
+        emails: ['test@example.com'],
+        enable_smtp: false,
+        enable_catch_all: false,
+      })
+    })
+
+    await waitFor(() => {
+      expect(result.current.isPending).toBe(false)
+    })
+
+    await waitFor(() => {
+      expect(result.current.error).toBeDefined()
+    })
+    expect((result.current.error as Error)?.message).toBe('VITE_API_KEY environment variable is required')
   })
 }) 

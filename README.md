@@ -356,6 +356,62 @@ This project is optimized for deployment on Render's free tier:
    - **API Endpoints**: `https://your-app.onrender.com/api`
    - **Health Check**: `https://your-app.onrender.com/health`
 
+## 🔐 **Authentication**
+
+The application uses **JWT (JSON Web Tokens)** for secure authentication between frontend and backend.
+
+### **Backend Authentication**
+
+The backend supports two authentication methods:
+
+1. **API Keys** - For generating JWT tokens
+2. **JWT Tokens** - For API access
+
+#### **API Key Configuration**
+
+Set up API keys in your environment files:
+
+```bash
+# Development (.env.dev)
+API_KEY_USER=user_api_key_here
+API_KEY_ADMIN=admin_api_key_here
+
+# Production (.env.prod)  
+API_KEY_USER=your_production_user_api_key_here
+API_KEY_ADMIN=your_production_admin_api_key_here
+```
+
+#### **JWT Configuration**
+
+```bash
+# JWT Settings
+JWT_SECRET_KEY=your_jwt_secret_key_here
+JWT_ALGORITHM=HS256
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
+```
+
+### **Frontend Authentication**
+
+The frontend automatically handles JWT authentication:
+
+1. **API Key** - Used to obtain JWT tokens
+2. **JWT Token** - Cached and used for API requests
+3. **Auto-refresh** - Tokens are automatically refreshed when needed
+
+#### **Frontend Environment Setup**
+
+```bash
+# Development (frontend/.env)
+VITE_API_URL=http://localhost:8000
+VITE_API_KEY=user_api_key_here
+
+# Production (frontend/.env.production)
+VITE_API_URL=https://your-api-domain.com
+VITE_API_KEY=your_production_api_key_here
+```
+
+**Important**: The `VITE_API_KEY` must match a valid API key in your backend key manager.
+
 ## 🤝 Contributing
 
 We welcome contributions! Feel free to open issues or submit pull requests. Please make sure to run the tests and linters before pushing your changes.

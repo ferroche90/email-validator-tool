@@ -13,9 +13,14 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = Field(default="dev", description="Environment: dev or prod")
     DEBUG: bool = Field(default=True, description="Debug mode")
 
-    # API Configuration
-    API_TOKEN: str = Field(default="dev_token_here", description="API authentication token")
-    ADMIN_TOKEN: str = Field(default="dev_admin_token_here", description="Admin authentication token")
+    # JWT Configuration
+    JWT_SECRET_KEY: str = Field(default="dev-secret-key-change-in-production", description="JWT secret key")
+    JWT_ALGORITHM: str = Field(default="HS256", description="JWT algorithm")
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=60, description="JWT token expiration in minutes")
+    
+    # API Keys for JWT token generation
+    API_KEY_USER: str = Field(default="user_api_key_here", description="API key for user role")
+    API_KEY_ADMIN: str = Field(default="admin_api_key_here", description="API key for admin role")
 
     # Database
     DATABASE_URL: str = Field(default="sqlite:///app.db", description="Database connection URL")
@@ -33,23 +38,23 @@ class Settings(BaseSettings):
     SMTP_TIMEOUT: int = Field(default=10, description="SMTP timeout in seconds")
     SMTP_PORT: int = Field(default=25, description="SMTP port")
     MAX_CONCURRENT_CONNECTIONS: int = Field(default=10, description="Maximum concurrent connections")
-    PER_DOMAIN_DELAY_SECONDS: float = Field(default=5.0, description="Delay between domain requests")
-
-    # Optional features
-    ENABLE_CATCH_ALL: bool = Field(default=False, description="Enable catch-all detection")
-    ENABLE_SMTP: bool = Field(default=False, description="Enable SMTP verification")
-
-    # General parameters
-    CSV_INPUT_PATH: str = Field(default="emails.csv", description="Default CSV input path")
-    CSV_OUTPUT_PATH: str = Field(default="results.csv", description="Default CSV output path")
+    PER_DOMAIN_DELAY_SECONDS: float = Field(default=1.0, description="Delay between requests to the same domain")
 
     # DNS Cache settings
-    ENABLE_DNS_CACHE: bool = Field(default=True, description="Enable DNS caching")
+    ENABLE_DNS_CACHE: bool = Field(default=True, description="Enable DNS cache")
     DNS_CACHE_TTL_SECONDS: int = Field(default=3600, description="DNS cache TTL in seconds")
 
+    # Validation settings
+    ENABLE_SMTP: bool = Field(default=False, description="Enable SMTP validation")
+    ENABLE_CATCH_ALL: bool = Field(default=False, description="Enable catch-all detection")
+
+    # CSV settings
+    CSV_INPUT_PATH: str = Field(default="emails.csv", description="Input CSV file path")
+    CSV_OUTPUT_PATH: str = Field(default="results.csv", description="Output CSV file path")
+
     class Config:
-        env_file = None  # We'll handle this manually
-        case_sensitive = True
+        env_file = ".env"
+        case_sensitive = False
 
     def __init__(self, **kwargs):
         # Load environment-specific .env file before initializing
