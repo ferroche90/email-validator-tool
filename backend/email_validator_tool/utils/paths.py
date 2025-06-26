@@ -87,4 +87,4 @@ def get_data_dir() -> Path:
     # Always make sure the directory exists to avoid race conditions where
     # different components attempt to create it concurrently.
     data_dir.mkdir(parents=True, exist_ok=True)
-    return data_dir 
+    return data_dir

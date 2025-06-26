@@ -12,10 +12,10 @@ class TypoSuggestionValidator:
     async def validate(self, email: str) -> ValidationResult:
         """
         Add typo suggestions to the validation result.
-        
+
         Args:
             email: Email address to validate
-            
+
         Returns:
             ValidationResult with optional typo suggestion
         """
@@ -23,23 +23,19 @@ class TypoSuggestionValidator:
             # Extract domain from email
             if "@" not in email:
                 return ValidationResult(email=email, status=ValidationStatus.VALID)
-            
+
             domain = email.split("@")[1]
-            
+
             # Get typo suggestion
             suggestion = suggest_domain(domain)
-            
+
             if suggestion:
                 # Create email with suggested domain
                 suggested_email = f"{email.split('@')[0]}@{suggestion}"
-                return ValidationResult(
-                    email=email,
-                    status=ValidationStatus.VALID,
-                    suggestion=suggested_email
-                )
-            
+                return ValidationResult(email=email, status=ValidationStatus.VALID, suggestion=suggested_email)
+
             return ValidationResult(email=email, status=ValidationStatus.VALID)
-            
+
         except Exception as e:
             logger.error(f"Error in TypoSuggestionValidator for {email}: {e}")
-            return ValidationResult(email=email, status=ValidationStatus.VALID) 
+            return ValidationResult(email=email, status=ValidationStatus.VALID)

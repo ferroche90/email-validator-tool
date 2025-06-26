@@ -38,4 +38,4 @@ async def test_abuse_reload():
     validator = AbuseListValidator()
     initial_count = validator.get_abuse_count()
     reloaded_count = validator.reload_abuse_list()
-    assert reloaded_count == initial_count  # Should be the same in test environment 
+    assert reloaded_count == initial_count  # Should be the same in test environment

@@ -64,7 +64,9 @@ class SMTPValidator:
             logger.debug(f"Checking {email} via MX {mx_host}")
 
             try:
-                async with aiosmtplib.SMTP(hostname=mx_host, port=self.settings.SMTP_PORT, timeout=self.settings.SMTP_TIMEOUT) as smtp:
+                async with aiosmtplib.SMTP(
+                    hostname=mx_host, port=self.settings.SMTP_PORT, timeout=self.settings.SMTP_TIMEOUT
+                ) as smtp:
                     # EHLO
                     await smtp.ehlo()
 

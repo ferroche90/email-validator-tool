@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = Field(default="dev-secret-key-change-in-production", description="JWT secret key")
     JWT_ALGORITHM: str = Field(default="HS256", description="JWT algorithm")
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=60, description="JWT token expiration in minutes")
-    
+
     # Database
     DATABASE_URL: str = Field(default="sqlite:///app.db", description="Database connection URL")
 
@@ -50,7 +50,9 @@ class Settings(BaseSettings):
     CSV_OUTPUT_PATH: str = Field(default="results.csv", description="Output CSV file path")
 
     # Data directory (can be overridden via env vars DATA_DIR or EMAIL_VALIDATOR_DATA_DIR)
-    DATA_DIR: Optional[str] = Field(default=None, description="Absolute path to the shared data directory", env="DATA_DIR")
+    DATA_DIR: Optional[str] = Field(
+        default=None, description="Absolute path to the shared data directory", env="DATA_DIR"
+    )
 
     class Config:
         env_file = ".env"
@@ -59,10 +61,10 @@ class Settings(BaseSettings):
     def __init__(self, **kwargs):
         # Load environment-specific .env file before initializing
         self._load_environment_file()
-        
+
         # Validate production settings
         self._validate_production_settings()
-        
+
         # Let BaseSettings process env vars / kwargs first
         super().__init__(**kwargs)
 
@@ -87,10 +89,10 @@ class Settings(BaseSettings):
 
         # Get environment from OS-level variable first, then default to dev
         environment = os.getenv("ENVIRONMENT", "dev")
-        
+
         # Determine which .env file to load
         env_file = f".env.{environment}"
-        
+
         # Load the environment-specific file if it exists
         if os.path.exists(env_file):
             load_dotenv(env_file)
@@ -103,7 +105,7 @@ class Settings(BaseSettings):
         """Validate that production settings are secure"""
         environment = os.getenv("ENVIRONMENT", "dev")
         debug = os.getenv("DEBUG", "true").lower() == "true"
-        
+
         if environment == "prod" and debug:
             raise RuntimeError("DEBUG must be false in production environment")
 

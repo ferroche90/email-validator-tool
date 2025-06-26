@@ -17,7 +17,7 @@ class SyntaxValidator:
                     status=ValidationStatus.INVALID_SYNTAX,
                     details="An email address must have an @-sign.",
                 )
-            
+
             # Validate email syntax
             validate_email(email)
             logger.info(f"Email {email} has valid syntax")

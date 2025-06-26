@@ -58,4 +58,4 @@ class AbuseListValidator:
             )
 
         # Passes abuse check
-        return ValidationResult(email=email, status=ValidationStatus.VALID) 
+        return ValidationResult(email=email, status=ValidationStatus.VALID)

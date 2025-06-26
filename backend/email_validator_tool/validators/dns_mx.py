@@ -201,5 +201,5 @@ class DNSMXValidator:
 
     def __del__(self):
         """Cleanup executor on deletion."""
-        if hasattr(self, '_executor'):
+        if hasattr(self, "_executor"):
             self._executor.shutdown(wait=False)

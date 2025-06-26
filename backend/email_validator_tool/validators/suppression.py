@@ -78,18 +78,15 @@ def add_suppressions(emails: Set[str]) -> int:
     try:
         conn = sqlite3.connect(str(SUPPRESSION_DB_PATH), timeout=10)
         cursor = conn.cursor()
-        
+
         for email in emails:
             try:
-                cursor.execute(
-                    "INSERT OR IGNORE INTO suppressions (email) VALUES (?)",
-                    (email.lower(),)
-                )
+                cursor.execute("INSERT OR IGNORE INTO suppressions (email) VALUES (?)", (email.lower(),))
                 if cursor.rowcount > 0:
                     added_count += 1
             except sqlite3.Error as e:
                 logger.error(f"Failed to add suppression for {email}: {e}")
-        
+
         conn.commit()
         logger.info(f"Added {added_count} new suppressions to database")
         return added_count
@@ -182,4 +179,4 @@ class SuppressionValidator:
 
 
 # Initialize database on module import
-setup_suppression_database() 
+setup_suppression_database()

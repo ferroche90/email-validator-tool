@@ -14,6 +14,7 @@ from .throttle import enforce_domain_delay
 
 # Throttling handled via validators.throttle module
 
+
 def generate_random_string(k: int = 20) -> str:
     """Generate a random string of lowercase letters and digits."""
     return "".join(random.choices(string.ascii_lowercase + string.digits, k=k))
@@ -31,7 +32,7 @@ class CatchAllValidator:
         """Check if cached result for domain is still valid."""
         if domain not in self.domain_cache:
             return False
-        
+
         _, timestamp = self.domain_cache[domain]
         return time.time() - timestamp < self.settings.CATCH_ALL_CACHE_TTL_SECONDS
 

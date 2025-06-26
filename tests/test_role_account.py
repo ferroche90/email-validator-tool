@@ -60,14 +60,14 @@ async def test_role_account_validation_with_invalid_email(invalid_email):
 async def test_role_account_validation_uses_constants():
     """Test that the validator uses the COMMON_ROLE_ACCOUNTS constant."""
     validator = RoleAccountValidator()
-    
+
     # Test a few role accounts from the constant
     for role_account in ["admin", "info", "support", "sales", "contact"]:
         email = f"{role_account}@example.com"
         result = await validator.validate(email)
         assert result.status == ValidationStatus.ROLE_ACCOUNT
         assert role_account in COMMON_ROLE_ACCOUNTS
-    
+
     # Test a non-role account
     result = await validator.validate("john.doe@example.com")
     assert result.status == ValidationStatus.VALID

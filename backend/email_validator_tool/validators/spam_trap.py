@@ -70,4 +70,4 @@ class SpamTrapValidator:
             )
 
         # Passes spam-trap check
-        return ValidationResult(email=email, status=ValidationStatus.VALID) 
+        return ValidationResult(email=email, status=ValidationStatus.VALID)

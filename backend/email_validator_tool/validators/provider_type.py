@@ -52,4 +52,4 @@ class ProviderTypeValidator:
             return ValidationResult(email=email, status=ValidationStatus.VALID, meta=meta)
         except Exception as e:
             logger.error(f"Error in ProviderTypeValidator for {email}: {e}")
-            return ValidationResult(email=email, status=ValidationStatus.VALID, meta=meta) 
+            return ValidationResult(email=email, status=ValidationStatus.VALID, meta=meta)

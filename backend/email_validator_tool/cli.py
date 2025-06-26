@@ -180,32 +180,26 @@ def bounce_stats():
 
 
 @keys_app.command()
-def create(
-    role: str = typer.Argument(
-        ...,
-        help="Role for the API key (user or admin)",
-        case_sensitive=False
-    )
-):
+def create(role: str = typer.Argument(..., help="Role for the API key (user or admin)", case_sensitive=False)):
     """Create a new API key with the specified role."""
     try:
         if role.lower() not in ["user", "admin"]:
             typer.echo("Error: Role must be 'user' or 'admin'", err=True)
             raise typer.Exit(1)
-        
+
         key_manager = create_key_manager()
         api_key = key_manager.create_key(role.lower())
-        
+
         # Generate JWT token
         jwt_token = generate_jwt_for_key(api_key.key, api_key.role)
-        
+
         typer.echo(f"\n✅ API Key created successfully!")
         typer.echo(f"Role: {api_key.role}")
         typer.echo(f"API Key: {api_key.key}")
         typer.echo(f"JWT Token: {jwt_token}")
         typer.echo(f"Created: {api_key.created_at.strftime('%Y-%m-%d %H:%M:%S UTC')}")
         typer.echo("\n💡 Use the API key for authentication or the JWT token for direct access.")
-        
+
     except Exception as e:
         logger.error(f"Error creating API key: {str(e)}")
         raise typer.Exit(1)
@@ -217,67 +211,64 @@ def list():
     try:
         key_manager = create_key_manager()
         keys = key_manager.list_keys()
-        
+
         if not keys:
             typer.echo("No API keys found.")
             return
-        
+
         # Prepare table data
         table_data = []
         for key in keys:
             status = "🟢 Active" if not key.revoked else "🔴 Revoked"
-            table_data.append([
-                key.key[:16] + "..." if len(key.key) > 16 else key.key,
-                key.role,
-                status,
-                key.created_at.strftime("%Y-%m-%d %H:%M:%S")
-            ])
-        
+            table_data.append(
+                [
+                    key.key[:16] + "..." if len(key.key) > 16 else key.key,
+                    key.role,
+                    status,
+                    key.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                ]
+            )
+
         # Display table
         headers = ["API Key", "Role", "Status", "Created At"]
         table = tabulate(table_data, headers=headers, tablefmt="grid")
         typer.echo(table)
-        
+
     except Exception as e:
         logger.error(f"Error listing API keys: {str(e)}")
         raise typer.Exit(1)
 
 
 @keys_app.command()
-def revoke(
-    key: str = typer.Argument(
-        ...,
-        help="API key to revoke (can be partial, will match first 16 characters)"
-    )
-):
+def revoke(key: str = typer.Argument(..., help="API key to revoke (can be partial, will match first 16 characters)")):
     """Revoke an API key."""
     try:
         key_manager = create_key_manager()
-        
+
         # Find the key (support partial matching)
         target_key = None
         for stored_key in key_manager.keys.keys():
             if stored_key.startswith(key) or stored_key == key:
                 target_key = stored_key
                 break
-        
+
         if not target_key:
             typer.echo(f"Error: API key '{key}' not found", err=True)
             raise typer.Exit(1)
-        
+
         # Check if already revoked
         key_info = key_manager.get_key_info(target_key)
         if key_info and key_info.revoked:
             typer.echo(f"API key '{target_key[:16]}...' is already revoked.")
             return
-        
+
         # Revoke the key
         if key_manager.revoke_key(target_key):
             typer.echo(f"✅ API key '{target_key[:16]}...' has been revoked.")
         else:
             typer.echo(f"Error: Failed to revoke API key '{key}'", err=True)
             raise typer.Exit(1)
-        
+
     except Exception as e:
         logger.error(f"Error revoking API key: {str(e)}")
         raise typer.Exit(1)

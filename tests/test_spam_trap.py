@@ -32,4 +32,4 @@ async def test_spamtrap_non_match():
     """Regular email should not be marked as spam-trap."""
     validator = SpamTrapValidator()
     result = await validator.validate("john.doe@example.com")
-    assert result.status == ValidationStatus.VALID 
+    assert result.status == ValidationStatus.VALID
