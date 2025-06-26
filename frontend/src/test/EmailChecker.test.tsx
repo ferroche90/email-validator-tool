@@ -4,11 +4,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EmailChecker } from '../components/EmailChecker'
 
 // Mock the useValidateEmails hook
+const mockUseValidateEmails = vi.fn()
 vi.mock('../lib/useValidateEmails', () => ({
-  useValidateEmails: vi.fn(),
+  useValidateEmails: () => mockUseValidateEmails(),
 }))
-
-const mockUseValidateEmails = vi.mocked(await import('../lib/useValidateEmails')).useValidateEmails
 
 describe('EmailChecker', () => {
   beforeEach(() => {
@@ -26,7 +25,7 @@ describe('EmailChecker', () => {
     render(<EmailChecker />)
 
     expect(screen.getByLabelText(/Email Addresses/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Validar/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Validate/i })).toBeInTheDocument()
   })
 
   it('should show loading state during validation', () => {
@@ -83,10 +82,10 @@ describe('EmailChecker', () => {
     expect(screen.getByText('test2@example.com')).toBeInTheDocument()
     expect(screen.getByText('test3@example.com')).toBeInTheDocument()
     
-    // Check that status badges are displayed
-    expect(screen.getByText('valid')).toBeInTheDocument()
-    expect(screen.getByText('invalid_syntax')).toBeInTheDocument()
-    expect(screen.getByText('disposable')).toBeInTheDocument()
+    // Check that status badges are displayed (using translated text)
+    expect(screen.getByText('Valid')).toBeInTheDocument()
+    expect(screen.getByText('Invalid Syntax')).toBeInTheDocument()
+    expect(screen.getByText('Disposable')).toBeInTheDocument()
     
     // Check that details are displayed
     expect(screen.getByText('Invalid format')).toBeInTheDocument()
@@ -105,7 +104,7 @@ describe('EmailChecker', () => {
     render(<EmailChecker />)
 
     const textarea = screen.getByLabelText(/Email Addresses/i)
-    const button = screen.getByRole('button', { name: /Validar/i })
+    const button = screen.getByRole('button', { name: /Validate/i })
 
     // Enter email addresses
     fireEvent.change(textarea, {
@@ -132,7 +131,7 @@ describe('EmailChecker', () => {
 
     render(<EmailChecker />)
 
-    const advancedButton = screen.getByText(/⚙️ Avanzado/i)
+    const advancedButton = screen.getByText(/⚙️ Advanced/i)
     
     // Advanced options should be hidden initially
     expect(screen.queryByText(/Enable SMTP verification/i)).not.toBeInTheDocument()
@@ -158,8 +157,8 @@ describe('EmailChecker', () => {
     render(<EmailChecker />)
 
     const textarea = screen.getByLabelText(/Email Addresses/i)
-    const advancedButton = screen.getByText(/⚙️ Avanzado/i)
-    const button = screen.getByRole('button', { name: /Validar/i })
+    const advancedButton = screen.getByText(/⚙️ Advanced/i)
+    const button = screen.getByRole('button', { name: /Validate/i })
 
     // Enter email and enable advanced options
     fireEvent.change(textarea, { target: { value: 'test@example.com' } })
@@ -197,7 +196,7 @@ describe('EmailChecker', () => {
 
     render(<EmailChecker />)
 
-    expect(screen.getByRole('button', { name: /Descargar CSV/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Download CSV/i })).toBeInTheDocument()
   })
 
   it('should not show download CSV button when no results', () => {
@@ -210,6 +209,6 @@ describe('EmailChecker', () => {
 
     render(<EmailChecker />)
 
-    expect(screen.queryByRole('button', { name: /Descargar CSV/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Download CSV/i })).not.toBeInTheDocument()
   })
 }) 

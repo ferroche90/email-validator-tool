@@ -222,7 +222,7 @@ async def validate_emails(
         
         # Record metrics for each validation result
         for result in results:
-            increment_emails_validated(result.status, organization_id)
+            increment_emails_validated(result["status"], organization_id)
         
         return {"results": results}
     except Exception as e:

@@ -9,6 +9,24 @@ import axios from 'axios'
 vi.mock('axios')
 const mockedAxios = vi.mocked(axios)
 
+// Mock the API module with both default and named export, and interceptors
+vi.mock('../lib/api', () => ({
+  __esModule: true,
+  default: {
+    post: vi.fn(),
+    interceptors: { request: { use: vi.fn() } },
+  },
+  api: {
+    post: vi.fn(),
+    interceptors: { request: { use: vi.fn() } },
+  },
+}))
+
+// Mock the obtainJwtToken function
+vi.mock('../lib/useAuth', () => ({
+  obtainJwtToken: vi.fn().mockResolvedValue('mock-jwt-token'),
+}))
+
 const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -232,5 +250,16 @@ describe('useValidateEmails', () => {
       expect(result.current.error).toBeDefined()
     })
     expect((result.current.error as Error)?.message).toBe('VITE_API_KEY environment variable is required')
+  })
+
+  it('should return the correct structure', () => {
+    const { result } = renderHook(() => useValidateEmails(), {
+      wrapper: createWrapper(),
+    })
+
+    expect(result.current).toHaveProperty('mutate')
+    expect(result.current).toHaveProperty('isPending')
+    expect(result.current).toHaveProperty('error')
+    expect(result.current).toHaveProperty('data')
   })
 }) 

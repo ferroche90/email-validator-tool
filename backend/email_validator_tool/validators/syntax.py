@@ -9,6 +9,15 @@ class SyntaxValidator:
 
     async def validate(self, email: str) -> ValidationResult:
         try:
+            # Basic check for @ symbol before calling validate_email
+            if "@" not in email:
+                logger.warning(f"Invalid email syntax for {email}: An email address must have an @-sign.")
+                return ValidationResult(
+                    email=email,
+                    status=ValidationStatus.INVALID_SYNTAX,
+                    details="An email address must have an @-sign.",
+                )
+            
             # Validate email syntax
             validate_email(email)
             logger.info(f"Email {email} has valid syntax")

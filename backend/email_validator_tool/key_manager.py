@@ -177,7 +177,12 @@ def create_key_manager() -> KeyManager:
 
 def generate_jwt_for_key(api_key: str, role: str) -> str:
     """Generate a JWT token for an API key."""
-    from backend.app.auth.jwt import create_access_token
+    # Use the same import path as the rest of the backend to avoid loading
+    # the SQLModel metadata twice ("backend.app..." vs "app...").
+    # Importing via the wrong namespace causes the *Organization* table to be
+    # registered twice, triggering the "Table already defined" error when the
+    # CLI command `manage-keys create` is executed.
+    from app.auth.jwt import create_access_token
     
     payload = {
         "sub": f"{role}_user",
