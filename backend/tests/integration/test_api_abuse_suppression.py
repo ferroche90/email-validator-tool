@@ -1,6 +1,6 @@
 """Integration tests for abuse and suppression endpoints."""
 
-from .conftest import get_token_safely
+from backend.tests.conftest import get_token_safely
 
 
 def test_add_suppressions_endpoint(client, setup_test_api_keys):

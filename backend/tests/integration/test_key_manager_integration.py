@@ -1,15 +1,16 @@
 """
-Integration tests for key manager with backend API.
+Integration tests for key manager functionality.
 """
 
 import tempfile
+from pathlib import Path
 
 import pytest
 from app.main import app
 from email_validator_tool.key_manager import KeyManager
 from fastapi.testclient import TestClient
 
-from .conftest import get_token_safely
+from backend.tests.conftest import get_token_safely
 
 
 class TestKeyManagerBackendIntegration:

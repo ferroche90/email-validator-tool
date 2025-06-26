@@ -1,6 +1,8 @@
+"""Integration tests for advanced API features."""
+
 from fastapi.testclient import TestClient
 
-from .conftest import get_token_safely
+from backend.tests.conftest import get_token_safely
 
 
 def test_validate_emails_unauthorized(client: TestClient):
