@@ -1,421 +1,273 @@
-# Email Validator Tool
+# Email Validator Tool  
+**Internal – Confidential – © <Your Company Name>**
 
-[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=flat-square&logo=github)](https://github.com/ferroche90/email-validator-tool.git)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.8+-blue?style=flat-square&logo=python)](https://python.org)
-[![React](https://img.shields.io/badge/React-19.1+-blue?style=flat-square&logo=react)](https://reactjs.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
+> A production-ready, cloud-agnostic service that validates e-mail lists fast, accurately and at scale. The mono-repo ships a FastAPI backend, a React + Vite SPA, and a pure-Python core library that can also be consumed stand-alone or via CLI.
 
-A comprehensive, production-ready email validation tool with multiple verification layers, featuring both a command-line interface and a modern web application. This tool provides robust email validation through syntax checking, DNS/MX verification, disposable domain detection, role account identification, bounce list checking, and optional SMTP verification and catch-all detection.
+---
 
-## 🌟 Features
+## Table of Contents
+1. [Overview](#1-overview)  
+2. [Repository Layout](#2-repository-layout)  
+3. [Feature Matrix](#3-feature-matrix)  
+4. [Technology Stack](#4-technology-stack)  
+5. [Quick Start](#5-quick-start)  
+   5.1 [Docker Compose (all-in)](#51-docker-compose-all-in)  
+   5.2 [Local Developer Setup](#52-local-developer-setup)  
+6. [Environment Configuration](#6-environment-configuration)  
+7. [Command-Line Interface (CLI)](#7-command-line-interface-cli)  
+8. [REST API](#8-rest-api)  
+9. [Frontend SPA](#9-frontend-spa)  
+10. [Testing & Quality Gates](#10-testing--quality-gates)  
+11. [Observability & Metrics](#11-observability--metrics)  
+12. [Database Migrations](#12-database-migrations)  
+13. [Load Testing](#13-load-testing)  
+14. [Deployment](#14-deployment)  
+15. [Git & CI/CD Workflow](#15-git--cicd-workflow)  
+16. [Code Style Guide](#16-code-style-guide)  
+17. [Security & Compliance](#17-security--compliance)  
+18. [Troubleshooting FAQ](#18-troubleshooting-faq)  
+19. [License](#19-license)  
+20. [Contributors](#20-contributors)
 
-### Core Validation Layers
-- **📧 Syntax Validation**: RFC-compliant email format verification
-- **🌐 DNS/MX Verification**: Domain existence and mail server validation
-- **🗑️ Disposable Domain Detection**: Identifies temporary email services
-- **👤 Role Account Detection**: Flags generic accounts (admin, info, etc.)
-- **📋 Bounce List Checking**: Validates against local bounce database
-- **🎯 Catch-all Detection**: Identifies domains that accept any email (optional)
-- **📬 SMTP Verification**: Direct mailbox existence verification (optional)
+---
 
-### Application Modes
-- **🖥️ Command Line Interface**: Batch processing with CSV input/output
-- **🌐 Web Application**: Modern React frontend with FastAPI backend
-- **🔌 REST API**: Programmatic access with rate limiting and authentication
-- **🐳 Docker Support**: Containerized deployment with Caddy reverse proxy
+## 1. Overview
+The service performs **three progressive validation phases**:
+1. **Syntax & domain checks** – RFC 5322 syntax, disposable/typo domains, role accounts.
+2. **DNS / MX look-ups** – asynchronous MX resolution with optional per-domain caching.
+3. **SMTP handshake** *(optional)* – verifies mailboxes and catch-all servers without sending emails.
 
-### Performance Features
-- **⚡ Asynchronous Processing**: High-performance concurrent validation
-- **💾 DNS Caching**: Intelligent caching to reduce network requests
-- **📊 Incremental Processing**: Real-time CSV writing for large datasets
-- **🔄 Rate Limiting**: Configurable limits to prevent server blocking
+Results are available via:
+* **REST API** – `POST /validate` returns per-address verdicts (+verdict codes).  
+* **CLI** – `email-validator validate emails.csv results.csv`.  
+* **React SPA** – modern interface with CSV upload, status badges & dark mode.
 
-## 🏗️ Architecture
+---
 
-### Project Structure
+## 2. Repository Layout
+```text
+repo/
+├─ backend/                # FastAPI app, Alembic migrations, services
+│  ├─ app/
+│  └─ tests/
+├─ email_validator_tool/   # Pure-Python core lib, CLI entry-points
+├─ frontend/               # Vite + React 19 SPA (TypeScript, Tailwind CSS)
+│  └─ src/test/            # Vitest + React-Testing-Library
+├─ infra/
+│  └─ env/                 # *.example.env templates for each tier
+├─ loadtest/               # Locust load-testing scenarios
+├─ docs/                   # ADRs, architecture diagrams, etc.
+├─ docker-compose.yml      # Spins up API + Caddy reverse-proxy
+└─ Makefile                # One-liners for common dev tasks
 ```
-email-validator-tool/
-├── 📁 email_validator_tool/     # Core CLI package
-│   ├── cli.py                   # Command-line interface
-│   ├── config.py                # Configuration management
-│   ├── core/                    # Core validation logic
-│   ├── validators/              # Individual validators
-│   └── logger.py                # Logging configuration
-├── 📁 backend/                  # FastAPI web service
-│   ├── app/                     # FastAPI application
-│   ├── requirements.txt         # Python dependencies
-│   └── Dockerfile               # Backend container
-├── 📁 frontend/                 # React web application
-│   ├── src/                     # React source code
-│   ├── package.json             # Node.js dependencies
-│   └── vite.config.ts           # Build configuration
-├── 📁 tests/                    # Test suite
-├── docker-compose.yml           # Multi-container setup
-├── render.yaml                  # Render deployment config
-└── Makefile                     # Development shortcuts
-```
 
-### Technology Stack
+---
 
-#### Backend (Python)
-- **FastAPI**: Modern, fast web framework for APIs
-- **Uvicorn**: ASGI server for production deployment
-- **Pydantic**: Data validation and settings management
-- **SQLite**: Local database for bounce list storage
-- **aiosmtplib**: Asynchronous SMTP operations
-- **dnspython**: DNS resolution and MX record checking
-- **email-validator**: RFC-compliant email validation
-- **disposable-email-domains**: Disposable domain detection
+## 3. Feature Matrix
+| Layer | Check | Core Lib | API | CLI | Notes |
+|-------|-------|---------|-----|-----|-------|
+| Syntax | RFC 5322 parser | ✓ | ✓ | ✓ | leveraging `email-validator` lib |
+| Typo Suggestions | `gmail.com` vs `gmai.com` | ✓ | ✓ | ✓ | Damerau-Levenshtein |
+| Disposable Domains | blocklists refreshed daily | ✓ | ✓ | ✓ | 120 k+ domains |
+| Role Accounts | `info@`, `sales@` | ✓ | ✓ | ✓ | Configurable list |
+| Provider Type | B2B / Freemail heuristic | ✓ | ✓ | ✓ | MX patterns |
+| DNS / MX | async aiodns cache | ✓ | ✓ | CLI flag `--enable-catch-all` |
+| Catch-All Detection | RCPT-TO probing | ✓ | ✓ | CLI flag |
+| SMTP Validation | 3-way handshake | ✓ | ✓ | CLI flag `--enable-smtp` |
+| Abuse / Bounce Lists | internal SQLite store | ✓ | ✓ | Admin only |
+| Rate Limiting | sliding-window per JWT | – | ✓ | via `slowapi` |
 
-#### Frontend (React/TypeScript)
-- **React 19**: Modern UI framework
-- **TypeScript**: Type-safe development
-- **Vite**: Fast build tool and dev server
-- **Tailwind CSS**: Utility-first CSS framework
-- **React Query**: Server state management
-- **Axios**: HTTP client for API communication
-- **Heroicons**: Beautiful icon library
+---
 
-#### Infrastructure
-- **Docker**: Containerization
-- **Caddy**: Reverse proxy with automatic HTTPS
-- **Render**: Cloud deployment platform
-- **SQLite**: Lightweight database
+## 4. Technology Stack
+* **Python 3.11+** – core library & FastAPI backend  
+* **FastAPI 0.104+** – async REST endpoints  
+* **React 19 + Vite 5** – frontend SPA  
+* **SQLite / Postgres** – persistence (configurable via `DATABASE_URL`)  
+* **Redis (optional)** – shared DNS cache, rate-limit store  
+* **Docker & Caddy** – containerisation & TLS termination  
+* **GitHub Actions** – CI (lint, test, build, deploy)  
+* **Prometheus / Grafana** – metrics & dashboards (see `infra/observability/`)
 
-## 🚀 Quick Start
+---
 
-### Prerequisites
-- **Python 3.8+**
-- **Node.js 18+** (for frontend development)
-- **Docker** (for containerized deployment)
-
-### Local Development Setup
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/ferroche90/email-validator-tool.git
-   cd email-validator
-   ```
-
-2. **Set up environment files (choose one option):**
-   
-   **Option A: Use the setup script (recommended)**
-   ```bash
-   # Linux/Mac
-   chmod +x setup-env.sh && ./setup-env.sh
-   
-   # Windows
-   setup-env.bat
-   ```
-   
-   **Option B: Manual setup**
-   ```bash
-   # Backend environment
-   cp infra/env/dev.example.env .env.dev
-   
-   # Frontend environment
-   cp infra/env/frontend.example.env frontend/.env
-   ```
-
-3. **Install Python dependencies**
-   ```bash
-   pip install -r requirements.txt
-   # All dependencies are now consolidated in a single file
-   # (no need to install backend/requirements.txt separately)
-   ```
-
-4. **Install frontend dependencies**
-   ```bash
-   cd frontend
-   pnpm install
-   cd ..
-   ```
-
-5. **Start development servers**
-   ```bash
-   # Start both frontend and backend
-   make dev
-   
-   # Or start them separately
-   make dev-frontend  # Frontend on http://localhost:5173
-   make dev-backend   # Backend on http://localhost:8000
-   ```
-
-### Using the Command Line Tool
-
-#### Basic Validation
+## 5. Quick Start
+### 5.1 Docker Compose (all-in)
 ```bash
-# Validate emails from CSV file
-python -m email_validator_tool.cli validate input.csv output.csv
+# 0) prerequisites: Docker ≥ 24 & Make
+make dev        # → docker compose up --build
 ```
+Services:
+* `api` – FastAPI (`localhost:8000`)  
+* `caddy` – reverse-proxy with auto-reload (`localhost`)
 
-#### Advanced Validation
+### 5.2 Local Developer Setup
 ```bash
-# With catch-all detection
-python -m email_validator_tool.cli validate input.csv output.csv --enable-catch-all
+# Backend + CLI
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt -e backend/ -e .
+cp infra/env/dev.example.env .env
+alembic -c backend/alembic.ini upgrade head
+uvicorn backend.app.main:app --reload
 
-# With SMTP verification
-python -m email_validator_tool.cli validate input.csv output.csv --enable-smtp
-
-# With both advanced features
-python -m email_validator_tool.cli validate input.csv output.csv --enable-catch-all --enable-smtp
+# Frontend
+cd frontend && pnpm install && cp ../infra/env/frontend.example.env .env && pnpm dev
 ```
 
-#### Using Makefile Shortcuts
+---
+
+## 6. Environment Configuration
+Environment variables are centralised in [`infra/env/`](infra/env) templates.  
+Copy the relevant file to project root (`.env`) or `frontend/.env` and adjust:
+
+| Variable | Default (dev) | Description |
+|----------|---------------|-------------|
+| `ENVIRONMENT` | `dev` | Runtime identifier (`prod` disables debug, etc.) |
+| `JWT_SECRET_KEY` | *change me* | 32-byte secret for signing JWTs |
+| `API_KEY_USER` / `API_KEY_ADMIN` | *change me* | API-key → JWT exchange |
+| `DATABASE_URL` | `sqlite:///./data/email_validator.db` | SQLAlchemy DSN |
+| `RATE_LIMIT_REQUESTS_PER_MINUTE` | `100` | Per-key sliding window |
+| `ENABLE_DNS_CACHE` | `true` | Toggle MX cache |
+| `VITE_API_URL` | `http://localhost:8000` | Frontend → API base URL |
+| `VITE_API_KEY` | `test_admin_api_key` | Frontend auto-authentication |
+
+> **Tip** – any variable prefixed with `VITE_` is exposed to the SPA at build-time.
+
+---
+
+## 7. Command-Line Interface (CLI)
+Install core lib in editable mode (`pip install -e .`) then:
 ```bash
-# Basic validation
-make v ARGS='input.csv output.csv'
+email-validator validate emails.csv results.csv \
+  --enable-catch-all  --enable-smtp
 
-# With catch-all detection
-make vca ARGS='input.csv output.csv'
-
-# With SMTP verification
-make vsmtp ARGS='input.csv output.csv'
-
-# Full validation (both catch-all and SMTP)
-make vfull ARGS='input.csv output.csv'
+email-validator manage-keys create admin   # create API key
+email-validator cache-stats                # DNS cache insight
 ```
+Run `email-validator --help` for the full tree.
 
-## 🌐 Web Application
+---
 
-### Features
-- **📱 Responsive Design**: Works on desktop, tablet, and mobile
-- **⚡ Real-time Validation**: Instant feedback on email validation
-- **📊 Results Export**: Download validation results as CSV
-- **🔧 Advanced Options**: Toggle SMTP and catch-all detection
-- **🎨 Modern UI**: Clean, intuitive interface with Tailwind CSS
+## 8. REST API
+Base URL defaults to `/` when served behind Caddy, or `/api` when served directly.
 
-### Access Points
-- **Frontend**: `http://localhost:5173` (development)
-- **Backend API**: `http://localhost:8000` (development)
-- **API Documentation**: `http://localhost:8000/docs` (Swagger UI)
-- **Health Check**: `http://localhost:8000/health`
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/token` | API-Key | Exchange API-Key → JWT |
+| `POST` | `/validate` | Bearer | Validate one or many addresses |
+| `GET` | `/health` | – | Liveness probe |
+| `GET` | `/metrics` | allow-list | Prometheus metrics |
+| `GET` | `/cache-stats` | Admin JWT | MX cache info |
+| `POST` | `/admin/reload-spamtraps` | Admin JWT | Refresh spam-trap list |
 
-## 🔧 Configuration
+Swagger is available at `/docs` in non-prod environments.
 
-### Environment Configuration
+---
 
-The application supports separate development and production environments with automatic configuration loading.
-
-#### Quick Setup
-
-1. **Backend/CLI Environment:**
-   ```bash
-   # For Development
-   cp infra/env/dev.example.env .env.dev
-   
-   # For Production
-   cp infra/env/prod.example.env .env.prod
-   # Edit .env.prod with your secure production values
-   ```
-
-2. **Frontend Environment:**
-   ```bash
-   # For Development
-   cp infra/env/frontend.example.env frontend/.env
-   
-   # For Production
-   cp infra/env/frontend.prod.example.env frontend/.env
-   # Edit frontend/.env with your secure production values
-   ```
-
-3. **Switch Environment:**
-   ```bash
-   # Development (default)
-   ENVIRONMENT=dev make dev
-   
-   # Production
-   ENVIRONMENT=prod make dev
-   ```
-
-#### Environment Files Structure
-
-**Backend/CLI (Root Directory):**
-- **`infra/env/dev.example.env`** - Development template with dummy values
-- **`infra/env/prod.example.env`** - Production template with placeholders
-- **`.env.dev`** - Your local development configuration (not committed to git)
-- **`.env.prod`** - Your production configuration (not committed to git)
-
-**Frontend (frontend/ Directory):**
-- **`infra/env/frontend.example.env`** - Development template with dummy values
-- **`infra/env/frontend.prod.example.env`** - Production template with placeholders
-- **`frontend/.env`** - Your frontend configuration (not committed to git)
-
-#### Configuration Priority
-
-**Backend/CLI:**
-1. **OS Environment Variables** (highest priority)
-2. **`.env.{ENVIRONMENT}`** file (e.g., `.env.dev` or `.env.prod`)
-3. **`.env`** file (fallback)
-4. **Default values** (lowest priority)
-
-**Frontend:**
-1. **OS Environment Variables** (highest priority)
-2. **`frontend/.env`** file
-3. **Default values** (lowest priority)
-
-#### Production Safety
-
-- **DEBUG mode is automatically disabled** in production
-- **Running with `ENVIRONMENT=prod DEBUG=true` will abort** with a clear error
-- **All sensitive values must be changed** from placeholder values
-- **Frontend and backend tokens must match** for authentication to work
-
-#### Available Settings
-
-**Backend/CLI Settings:**
-```env
-# Environment
-ENVIRONMENT=dev|prod
-DEBUG=true|false
-
-# API Configuration
-API_TOKEN=your_secure_api_token_here
-ADMIN_TOKEN=your_secure_admin_token_here
-
-# Database
-DATABASE_URL=sqlite:///app.db
-
-# Logging
-LOG_LEVEL=DEBUG|INFO|WARNING|ERROR
-
-# CORS
-CORS_ORIGINS=*
-
-# Rate Limiting
-RATE_LIMIT_PER_MINUTE=60
-
-# DNS Cache
-ENABLE_DNS_CACHE=True|False
-DNS_CACHE_TTL_SECONDS=3600
-
-# SMTP Configuration
-SMTP_TIMEOUT=10
-SMTP_PORT=25
-MAX_CONCURRENT_CONNECTIONS=10
-PER_DOMAIN_DELAY_SECONDS=5.0
-
-# Validation Options
-ENABLE_CATCH_ALL=False
-ENABLE_SMTP=False
-
-# General parameters
-CSV_INPUT_PATH=emails.csv
-CSV_OUTPUT_PATH=results.csv
-```
-
-**Frontend Settings:**
-```env
-# API Configuration
-VITE_API_URL=http://localhost:8000
-VITE_API_TOKEN=your_api_token_here
-```
-
-#### Important Notes
-
-- **Token Matching**: The `VITE_API_TOKEN` in `frontend/.env` must match the `API_TOKEN` in your backend `.env.dev` or `.env.prod` file
-- **VITE_ Prefix**: Only environment variables prefixed with `VITE_` are available to the frontend
-- **File Locations**: Backend env files go in the root, frontend env files go in the `frontend/` directory
-
-## 🐳 Docker Deployment
-
-### Quick Start with Docker Compose
-
-1. **Build and start all services**
-   ```bash
-   docker compose up -d --build
-   ```
-
-2. **Access the application**
-   - **Frontend**: `http://localhost`
-   - **Backend API**: `http://localhost/api`
-   - **API Docs**: `http://localhost/docs`
-
-### Docker Services
-
-- **API Service**: FastAPI backend with email validation logic
-- **Caddy Service**: Reverse proxy with automatic HTTPS
-- **Volumes**: Persistent storage for SSL certificates and configuration
-
-## ☁️ Cloud Deployment
-
-### Render (Recommended)
-
-This project is optimized for deployment on Render's free tier:
-
-1. **Fork the repository** to your GitHub account
-2. **Connect to Render**:
-   - Go to [render.com](https://render.com)
-   - Create a new Web Service
-   - Connect your GitHub repository
-   - Render will automatically detect the `render.yaml` configuration and deploy both the backend and frontend services.
-
-3. **Access your deployment**
-   - **Web Application**: `https://your-app.onrender.com`
-   - **API Endpoints**: `https://your-app.onrender.com/api`
-   - **Health Check**: `https://your-app.onrender.com/health`
-
-## 🔐 **Authentication**
-
-The application uses **JWT (JSON Web Tokens)** for secure authentication between frontend and backend.
-
-### **Backend Authentication**
-
-The backend supports two authentication methods:
-
-1. **API Keys** - For generating JWT tokens
-2. **JWT Tokens** - For API access
-
-#### **API Key Configuration**
-
-Set up API keys in your environment files:
-
+## 9. Frontend SPA
 ```bash
-# Development (.env.dev)
-API_KEY_USER=user_api_key_here
-API_KEY_ADMIN=admin_api_key_here
-
-# Production (.env.prod)  
-API_KEY_USER=your_production_user_api_key_here
-API_KEY_ADMIN=your_production_admin_api_key_here
+cd frontend
+pnpm install
+pnpm dev            # http://localhost:5173
 ```
+The app auto-authenticates using `VITE_API_KEY`, displays per-address verdicts and exports CSV. Internationalisation (i18n) currently supports **EN** and **ES**.
 
-#### **JWT Configuration**
-
+To build production assets:
 ```bash
-# JWT Settings
-JWT_SECRET_KEY=your_jwt_secret_key_here
-JWT_ALGORITHM=HS256
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES=60
+pnpm build          # output → frontend/dist
 ```
 
-### **Frontend Authentication**
+---
 
-The frontend automatically handles JWT authentication:
+## 10. Testing & Quality Gates
+| Target | Framework | Command |
+|--------|-----------|---------|
+| Core + Backend | PyTest (+ asyncio) | `make test` |
+| Frontend | Vitest + React-Testing-Library | `pnpm test` |
+| Load | Locust | `locust -f loadtest/locustfile.py` |
 
-1. **API Key** - Used to obtain JWT tokens
-2. **JWT Token** - Cached and used for API requests
-3. **Auto-refresh** - Tokens are automatically refreshed when needed
+Coverage ≥ 95 % is enforced by CI. `make lint` runs Black, Ruff and ESLint.
 
-#### **Frontend Environment Setup**
+---
 
+## 11. Observability & Metrics
+* **Prometheus** endpoint at `/metrics` (disabled in prod unless `ENABLE_METRICS=true`).  
+* Grafana dashboard JSON under `infra/observability/grafana-dashboard.json`.  
+* Request latency, verdict counts, DNS cache hit/miss, and rate-limit rejects are tracked.
+
+---
+
+## 12. Database Migrations
+The backend ships Alembic migrations under `backend/alembic/versions/`.
 ```bash
-# Development (frontend/.env)
-VITE_API_URL=http://localhost:8000
-VITE_API_KEY=user_api_key_here
-
-# Production (frontend/.env.production)
-VITE_API_URL=https://your-api-domain.com
-VITE_API_KEY=your_production_api_key_here
+alembic -c backend/alembic.ini revision --autogenerate -m "my_change"
+alembic -c backend/alembic.ini upgrade head
 ```
 
-**Important**: The `VITE_API_KEY` must match a valid API key in your backend key manager.
+---
 
-## 🤝 Contributing
+## 13. Load Testing
+Scripts reside in `loadtest/`. Quick run:
+```bash
+locust -f loadtest/locustfile.py --host http://localhost:8000
+```
+The script auto-generates a 10 k email CSV if not present and supports JWT authentication via `/token`.
 
-We welcome contributions! Feel free to open issues or submit pull requests. Please make sure to run the tests and linters before pushing your changes.
+---
 
-## 📄 License
+## 14. Deployment
+### Docker Image
+```bash
+# Build multi-arch
+DOCKER_BUILDKIT=1 docker buildx build --platform linux/amd64,linux/arm64 -t registry.local/email-validator:latest .
+```
+### Render.com
+A [Render Blueprint](render.yaml) is included; pushing to `main` auto-deploys staging.
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+---
+
+## 15. Git & CI/CD Workflow
+* **Branches** – `main` (protected), `release/x.y.z`, `feature/*`, `fix/*`.  
+* **Commit messages** – Conventional Commits (`feat:`, `fix:`, `chore:` …).  
+* **PRs** – squash-merged after 2 approvals, lint & tests green.  
+* **GitHub Actions** – workflows in `.github/workflows/` run lint → test → build.
+
+---
+
+## 16. Code Style Guide
+* **Python** – [PEP-8], Black (line-length 100), Ruff for lint, MyPy strict mode.  
+* **TypeScript** – ESLint (Airbnb + React), Prettier.  
+* **Commits** – run `make pre-commit install` to enable hooks.
+
+---
+
+## 17. Security & Compliance
+* The repo is **private**; sharing source is prohibited.  
+* Secrets **must not** be committed – use `.env.*` or your secret manager.  
+* JWT secret keys must be rotated every 90 days (see SOP-SEC-008).  
+* Only the `api` container exposes ports externally; Caddy terminates TLS and enforces HTTPS.
+
+---
+
+## 18. Troubleshooting FAQ
+| Symptom | Possible Cause | Fix |
+|---------|----------------|-----|
+| `Import \"locust\" could not be resolved` | Locust not installed in interpreter | `pip install --user locust` |
+| `UNIQUE constraint failed: organization.slug` | Org slug collision on test seed | Drop DB `rm data/email_validator.db` |
+| 429 Too Many Requests | Rate-limit exceeded | Increase `RATE_LIMIT_REQUESTS_PER_MINUTE` or wait 60 s |
+
+---
+
+## 19. License
+Distributed under the **MIT license** (see [LICENSE](LICENSE)). Internal company use only.
+
+---
+
+## 20. Contributors
+| Name | Role |
+|------|------|
+| John Doe | Maintainer |
+| Jane Smith | Frontend Lead |
+| Dev Team | Contributors |
+
+> _For access requests or questions ping **#email-validator** on Slack._ 
