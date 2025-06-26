@@ -8,9 +8,7 @@ from unittest.mock import patch
 
 import pytest
 from cryptography.fernet import Fernet
-from email_validator_tool.cli import create
-from email_validator_tool.cli import list as list_keys
-from email_validator_tool.cli import revoke
+
 from email_validator_tool.key_manager import (
     APIKey,
     KeyManager,
