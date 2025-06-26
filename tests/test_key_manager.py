@@ -8,7 +8,12 @@ from unittest.mock import patch
 
 import pytest
 from cryptography.fernet import Fernet
-from email_validator_tool.key_manager import APIKey, KeyManager, create_key_manager
+
+from backend.email_validator_tool.key_manager import (
+    APIKey,
+    KeyManager,
+    create_key_manager,
+)
 
 
 class TestAPIKey:
@@ -243,10 +248,10 @@ class TestCLIIntegration:
         with tempfile.TemporaryDirectory() as temp_dir:
             yield temp_dir
 
-    @patch("email_validator_tool.key_manager.KeyManager")
+    @patch("backend.email_validator_tool.key_manager.KeyManager")
     def test_cli_create_key(self, mock_key_manager_class, temp_data_dir):
         """Test CLI create key command."""
-        from email_validator_tool.cli import create
+        from backend.email_validator_tool.cli import create
 
         # Mock the key manager
         mock_key_manager = mock_key_manager_class.return_value
@@ -254,7 +259,7 @@ class TestCLIIntegration:
         mock_key_manager.create_key.return_value = mock_api_key
 
         # Mock JWT generation
-        with patch("email_validator_tool.cli.generate_jwt_for_key") as mock_jwt:
+        with patch("backend.email_validator_tool.cli.generate_jwt_for_key") as mock_jwt:
             mock_jwt.return_value = "jwt_token_123"
 
             # Test creating a user key
@@ -270,10 +275,10 @@ class TestCLIIntegration:
                 # Verify output was displayed
                 assert mock_echo.call_count >= 5  # Multiple echo calls for output
 
-    @patch("email_validator_tool.key_manager.KeyManager")
+    @patch("backend.email_validator_tool.key_manager.KeyManager")
     def test_cli_list_keys(self, mock_key_manager_class, temp_data_dir):
         """Test CLI list keys command."""
-        from email_validator_tool.cli import list as list_keys
+        from backend.email_validator_tool.cli import list as list_keys
 
         # Mock the key manager
         mock_key_manager = mock_key_manager_class.return_value
@@ -289,10 +294,10 @@ class TestCLIIntegration:
             # Verify output was displayed
             mock_echo.assert_called()
 
-    @patch("email_validator_tool.key_manager.KeyManager")
+    @patch("backend.email_validator_tool.key_manager.KeyManager")
     def test_cli_revoke_key(self, mock_key_manager_class, temp_data_dir):
         """Test CLI revoke key command."""
-        from email_validator_tool.cli import revoke
+        from backend.email_validator_tool.cli import revoke
 
         # Mock the key manager
         mock_key_manager = mock_key_manager_class.return_value
