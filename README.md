@@ -1,5 +1,5 @@
 # Email Validator Tool  
-**Internal – Confidential – © <Your Company Name>**
+**Internal – © <Webatix>**
 
 > A production-ready, cloud-agnostic service that validates e-mail lists fast, accurately and at scale. The mono-repo ships a FastAPI backend, a React + Vite SPA, and a pure-Python core library that can also be consumed stand-alone or via CLI.
 
