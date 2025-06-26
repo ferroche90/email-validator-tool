@@ -2,7 +2,6 @@
 Unit tests for the key manager functionality.
 """
 
-import json
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -126,8 +125,8 @@ class TestKeyManager:
     def test_list_keys_with_keys(self, key_manager):
         """Test listing keys when keys exist."""
         # Create some keys
-        user_key = key_manager.create_key("user")
-        admin_key = key_manager.create_key("admin")
+        _user_key = key_manager.create_key("user")
+        _admin_key = key_manager.create_key("admin")
 
         keys = key_manager.list_keys()
         assert len(keys) == 2

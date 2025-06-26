@@ -1,5 +1,4 @@
 import re
-from pathlib import Path
 from typing import Set
 
 from email_validator_tool.core.models import ValidationResult, ValidationStatus

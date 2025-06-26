@@ -5,14 +5,12 @@ Handles creation, storage, and validation of API keys with encrypted persistence
 """
 
 import json
-import os
 import secrets
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from cryptography.fernet import Fernet
-from email_validator_tool.config import get_settings
 from email_validator_tool.utils.paths import get_data_dir
 from loguru import logger
 from tabulate import tabulate
@@ -71,7 +69,7 @@ class KeyManager:
             key = Fernet.generate_key()
             with open(self.encryption_key_file, "wb") as f:
                 f.write(key)
-            logger.info(f"Generated new encryption key: {self.encryption_key_file}")
+            logger.info("Generated new encryption key: {}".format(self.encryption_key_file))
 
         self.fernet = Fernet(key)
 
@@ -86,9 +84,9 @@ class KeyManager:
                 data = json.loads(decrypted_data.decode())
 
                 self.keys = {key_id: APIKey.from_dict(key_data) for key_id, key_data in data.items()}
-                logger.info(f"Loaded {len(self.keys)} API keys")
+                logger.info("Loaded {} API keys".format(len(self.keys)))
             except Exception as e:
-                logger.error(f"Error loading API keys: {e}")
+                logger.error("Error loading API keys: {}".format(e))
                 self.keys = {}
         else:
             logger.info("No existing API keys found")
@@ -104,9 +102,9 @@ class KeyManager:
             with open(self.keys_file, "wb") as f:
                 f.write(encrypted_data)
 
-            logger.debug(f"Saved {len(self.keys)} API keys")
+            logger.debug("Saved {} API keys".format(len(self.keys)))
         except Exception as e:
-            logger.error(f"Error saving API keys: {e}")
+            logger.error("Error saving API keys: {}".format(e))
             raise
 
     def create_key(self, role: str) -> APIKey:
@@ -122,7 +120,7 @@ class KeyManager:
         self.keys[key] = api_key
         self._save_keys()
 
-        logger.info(f"Created new {role} API key")
+        logger.info("Created new {} API key".format(role))
         return api_key
 
     def list_keys(self) -> List[APIKey]:
@@ -136,7 +134,7 @@ class KeyManager:
 
         self.keys[key].revoked = True
         self._save_keys()
-        logger.info(f"Revoked API key")
+        logger.info("Revoked API key")
         return True
 
     def validate_key(self, key: str) -> Optional[str]:

@@ -1,7 +1,3 @@
-import asyncio
-import time
-from typing import Dict
-
 import aiosmtplib
 import dns.resolver
 from email_validator_tool.config import get_settings
