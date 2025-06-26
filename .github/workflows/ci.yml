@@ -103,10 +103,15 @@ jobs:
       run: |
         pytest tests/ -v --cov=email_validator_tool --cov-report=xml
 
-    - name: Run backend tests
+    - name: Run backend unit tests
       run: |
         cd backend
-        pytest tests/ -v --cov=app --cov-report=xml
+        pytest tests/unit -v --cov=email_validator_tool --cov-report=xml
+
+    - name: Run backend integration tests
+      run: |
+        cd backend
+        pytest tests/integration -v --cov=app --cov-report=xml
 
     - name: Run frontend tests
       run: |
