@@ -1,15 +1,19 @@
 import { useState } from 'react'
-import { ArrowPathIcon, Cog6ToothIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, Cog6ToothIcon, DocumentArrowDownIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { useTranslation } from 'react-i18next'
 import { useValidateEmails } from '../lib/useValidateEmails'
+import { useAuth } from '../lib/useAuth'
 import clsx from 'clsx'
 import type { ValidationResult, ValidateResponse } from '../types'
 
 export const EmailChecker = () => {
+  const { t } = useTranslation(['common', 'validation'])
   const [emails, setEmails] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [enableSmtp, setEnableSmtp] = useState(false)
   const [enableCatchAll, setEnableCatchAll] = useState(false)
   
+  const { isAuthenticated, isLoading: authLoading, error: authError, refreshToken } = useAuth()
   const { mutate, isPending, error, data } = useValidateEmails()
   const validationData = data as ValidateResponse | undefined
   const typedError = error as Error | null
@@ -60,6 +64,9 @@ export const EmailChecker = () => {
       case 'invalid_smtp':
       case 'disposable':
       case 'role_account':
+      case 'spamtrap':
+      case 'abuse':
+      case 'suppressed':
       case 'on_bounce_list':
       case 'catch_all':
         return 'bg-red-100 text-red-800 border-red-200'
@@ -70,21 +77,64 @@ export const EmailChecker = () => {
     }
   }
 
+  // Show loading state while authenticating
+  if (authLoading) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-white rounded-lg shadow-md p-6 text-center">
+          <ArrowPathIcon className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600">{t('common:app.authenticating')}</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show authentication error
+  if (authError) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg shadow-md p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <ExclamationTriangleIcon className="w-6 h-6 text-red-600" />
+            <h2 className="text-xl font-semibold text-red-800">{t('common:app.authError')}</h2>
+          </div>
+          <p className="text-red-700 mb-4">{authError}</p>
+          <button
+            onClick={refreshToken}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            {t('common:app.retryAuth')}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
+      {/* Authentication Status */}
+      {isAuthenticated && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+            <span className="text-green-800 font-medium">{t('common:app.authenticated')}</span>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-2xl font-bold mb-4">Email Validator</h2>
+        <h2 className="text-2xl font-bold mb-4">{t('common:app.title')}</h2>
         
         {/* Email Input */}
         <div className="mb-4">
           <label htmlFor="email-input" className="block text-sm font-medium text-gray-700 mb-2">
-            Email Addresses (one per line)
+            {t('common:email.inputLabel')}
           </label>
           <textarea
             id="email-input"
             value={emails}
             onChange={(e) => setEmails(e.target.value)}
-            placeholder="Enter email addresses here...&#10;example@domain.com&#10;test@example.org"
+            placeholder={t('common:email.inputPlaceholder')}
             className="w-full h-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
@@ -96,7 +146,7 @@ export const EmailChecker = () => {
             className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
           >
             <Cog6ToothIcon className="w-4 h-4" />
-            ⚙️ Avanzado
+            ⚙️ {t('common:ui.advanced')}
           </button>
           
           {showAdvanced && (
@@ -108,7 +158,7 @@ export const EmailChecker = () => {
                   onChange={(e) => setEnableSmtp(e.target.checked)}
                   className="mr-2"
                 />
-                Enable SMTP verification
+                {t('common:options.enableSmtp')}
               </label>
               <label className="flex items-center">
                 <input
@@ -117,7 +167,7 @@ export const EmailChecker = () => {
                   onChange={(e) => setEnableCatchAll(e.target.checked)}
                   className="mr-2"
                 />
-                Enable catch-all detection
+                {t('common:options.enableCatchAll')}
               </label>
             </div>
           )}
@@ -126,10 +176,10 @@ export const EmailChecker = () => {
         {/* Validate Button */}
         <button
           onClick={handleValidate}
-          disabled={isPending || !emails.trim()}
+          disabled={isPending || !emails.trim() || !isAuthenticated}
           className={clsx(
             "flex items-center gap-2 px-4 py-2 rounded-md font-medium",
-            isPending || !emails.trim()
+            isPending || !emails.trim() || !isAuthenticated
               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
               : "bg-blue-600 text-white hover:bg-blue-700"
           )}
@@ -137,13 +187,13 @@ export const EmailChecker = () => {
           {isPending ? (
             <ArrowPathIcon className="w-4 h-4 animate-spin" />
           ) : null}
-          {isPending ? 'Validating...' : 'Validar'}
+          {isPending ? t('common:ui.validating') : t('common:ui.validate')}
         </button>
 
         {/* Error Display */}
         {typedError && (
           <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            Error: {typedError.message}
+            {t('common:ui.error')}: {typedError.message}
           </div>
         )}
       </div>
@@ -152,13 +202,13 @@ export const EmailChecker = () => {
       {validationData?.results && (
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-semibold">Validation Results</h3>
+            <h3 className="text-xl font-semibold">{t('common:results.title')}</h3>
             <button
               onClick={handleDownloadCSV}
               className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
             >
               <DocumentArrowDownIcon className="w-4 h-4" />
-              Descargar CSV
+              {t('common:results.downloadCsv')}
             </button>
           </div>
 
@@ -167,13 +217,13 @@ export const EmailChecker = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
+                    {t('common:results.table.email')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    {t('common:results.table.status')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Details
+                    {t('common:results.table.details')}
                   </th>
                 </tr>
               </thead>
@@ -188,7 +238,7 @@ export const EmailChecker = () => {
                         "inline-flex px-2 py-1 text-xs font-semibold rounded-full border",
                         getStatusColor(result.status)
                       )}>
-                        {result.status}
+                        {t(`validation:status.${result.status}`, result.status)}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">

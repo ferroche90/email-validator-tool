@@ -8,7 +8,7 @@ import pytest
 @pytest.fixture
 def valid_email():
     """Return a valid email address for testing."""
-    return "test@example.com"
+    return "john.doe@example.com"
 
 
 @pytest.fixture

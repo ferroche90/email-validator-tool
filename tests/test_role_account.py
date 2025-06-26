@@ -4,6 +4,7 @@ Tests for the role account validator.
 
 import pytest
 
+from email_validator_tool.constants import COMMON_ROLE_ACCOUNTS
 from email_validator_tool.core.models import ValidationStatus
 from email_validator_tool.validators.role_account import RoleAccountValidator
 
@@ -53,3 +54,21 @@ async def test_role_account_validation_with_invalid_email(invalid_email):
     validator = RoleAccountValidator()
     result = await validator.validate(invalid_email)
     assert result.status == ValidationStatus.VALID  # Role account validator doesn't validate syntax
+
+
+@pytest.mark.asyncio
+async def test_role_account_validation_uses_constants():
+    """Test that the validator uses the COMMON_ROLE_ACCOUNTS constant."""
+    validator = RoleAccountValidator()
+    
+    # Test a few role accounts from the constant
+    for role_account in ["admin", "info", "support", "sales", "contact"]:
+        email = f"{role_account}@example.com"
+        result = await validator.validate(email)
+        assert result.status == ValidationStatus.ROLE_ACCOUNT
+        assert role_account in COMMON_ROLE_ACCOUNTS
+    
+    # Test a non-role account
+    result = await validator.validate("john.doe@example.com")
+    assert result.status == ValidationStatus.VALID
+    assert "john.doe" not in COMMON_ROLE_ACCOUNTS

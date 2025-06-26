@@ -1,0 +1,22 @@
+{
+  "status": {
+    "valid": "Válido",
+    "invalid_syntax": "Sintaxis Inválida",
+    "invalid_domain": "Dominio Inválido",
+    "invalid_mx": "MX Inválido",
+    "invalid_smtp": "SMTP Inválido",
+    "disposable": "Desechable",
+    "role_account": "Cuenta de Rol",
+    "spamtrap": "Trampa de Spam",
+    "abuse": "Abuso",
+    "suppressed": "Suprimido",
+    "on_bounce_list": "En Lista de Rebote",
+    "catch_all": "Catch All",
+    "unknown_error": "Error Desconocido"
+  },
+  "messages": {
+    "noEmails": "No se proporcionaron direcciones de email",
+    "validationComplete": "Validación completada",
+    "validationFailed": "Validación fallida"
+  }
+} 

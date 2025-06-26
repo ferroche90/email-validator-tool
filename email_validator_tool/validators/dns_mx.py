@@ -1,6 +1,9 @@
 import time
 from typing import Dict, Tuple
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
+import aiodns
 import dns.resolver
 from loguru import logger
 
@@ -8,18 +11,60 @@ from email_validator_tool.core.models import ValidationResult, ValidationStatus
 
 
 class DNSMXValidator:
-    """Validator for DNS MX records with caching support"""
+    """Validator for DNS MX records with async resolution and caching support"""
 
     def __init__(self, cache_ttl_seconds: int = 3600):
         """
-        Initialize DNS MX validator with caching
+        Initialize DNS MX validator with async resolution and caching
 
         Args:
             cache_ttl_seconds: Time to live for cached results in seconds (default: 1 hour)
         """
         self.mx_cache: Dict[str, Tuple[ValidationResult, float]] = {}
         self.cache_ttl_seconds = cache_ttl_seconds
+        self.resolver = None
+        self._executor = ThreadPoolExecutor(max_workers=4)
+        self._init_resolver()
         logger.info(f"DNS MX Validator initialized with cache TTL: {cache_ttl_seconds} seconds")
+
+    def _init_resolver(self):
+        """Initialize the async DNS resolver with fallback support."""
+        try:
+            self.resolver = aiodns.DNSResolver()
+            logger.info("Using aiodns for async DNS resolution")
+        except Exception as e:
+            logger.warning(f"aiodns not available, falling back to synchronous DNS: {e}")
+            self.resolver = None
+
+    async def _query_mx_async(self, domain: str) -> list:
+        """Query MX records asynchronously using aiodns."""
+        if self.resolver:
+            try:
+                mx_records = await self.resolver.query(domain, "MX")
+                return [record.host for record in mx_records]
+            except Exception as e:
+                logger.debug(f"Async DNS query failed for {domain}, falling back to sync: {e}")
+                return await self._query_mx_sync(domain)
+        else:
+            return await self._query_mx_sync(domain)
+
+    async def _query_mx_sync(self, domain: str) -> list:
+        """Query MX records synchronously using dnspython in executor."""
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(self._executor, self._query_mx_sync_internal, domain)
+
+    def _query_mx_sync_internal(self, domain: str) -> list:
+        """Internal synchronous MX query using dnspython."""
+        try:
+            mx_records = dns.resolver.resolve(domain, "MX")
+            return [str(record.exchange) for record in mx_records]
+        except dns.resolver.NXDOMAIN:
+            raise
+        except dns.resolver.NoAnswer:
+            raise
+        except Exception as e:
+            logger.error(f"DNS query error for {domain}: {e}")
+            raise
 
     def clear_cache(self) -> int:
         """
@@ -104,8 +149,8 @@ class DNSMXValidator:
                     del self.mx_cache[domain]
                     logger.debug(f"Removed expired cache entry for domain: {domain}")
 
-            # Perform DNS query
-            mx_records = dns.resolver.resolve(domain, "MX")
+            # Perform async DNS query
+            mx_records = await self._query_mx_async(domain)
 
             if mx_records:
                 logger.info(f"Found {len(mx_records)} MX records for {domain}")
@@ -114,27 +159,29 @@ class DNSMXValidator:
                 self.mx_cache[domain] = (result, time.time())
                 return result
 
-        except dns.resolver.NXDOMAIN:
-            logger.warning(f"Domain {domain} does not exist")
-            result = ValidationResult(
-                email=email,
-                status=ValidationStatus.INVALID_DOMAIN,
-                details=f"Domain {domain} does not exist",
-            )
-            # Cache the domain error result
-            self.mx_cache[domain] = (result, time.time())
-            return result
+        except (dns.resolver.NXDOMAIN, aiodns.error.DNSError) as e:
+            if "NXDOMAIN" in str(e) or isinstance(e, dns.resolver.NXDOMAIN):
+                logger.warning(f"Domain {domain} does not exist")
+                result = ValidationResult(
+                    email=email,
+                    status=ValidationStatus.INVALID_DOMAIN,
+                    details=f"Domain {domain} does not exist",
+                )
+                # Cache the domain error result
+                self.mx_cache[domain] = (result, time.time())
+                return result
 
-        except dns.resolver.NoAnswer:
-            logger.warning(f"No MX records found for domain {domain}")
-            result = ValidationResult(
-                email=email,
-                status=ValidationStatus.INVALID_MX,
-                details=f"No MX records found for domain {domain}",
-            )
-            # Cache the MX error result
-            self.mx_cache[domain] = (result, time.time())
-            return result
+        except (dns.resolver.NoAnswer, aiodns.error.DNSError) as e:
+            if "NoAnswer" in str(e) or isinstance(e, dns.resolver.NoAnswer):
+                logger.warning(f"No MX records found for domain {domain}")
+                result = ValidationResult(
+                    email=email,
+                    status=ValidationStatus.INVALID_MX,
+                    details=f"No MX records found for domain {domain}",
+                )
+                # Cache the MX error result
+                self.mx_cache[domain] = (result, time.time())
+                return result
 
         except Exception as exc:
             logger.error(f"DNS error for {email}: {exc}")
@@ -151,3 +198,8 @@ class DNSMXValidator:
             # Periodically cleanup expired cache entries (every 100 queries)
             if len(self.mx_cache) % 100 == 0:
                 self._cleanup_expired_cache()
+
+    def __del__(self):
+        """Cleanup executor on deletion."""
+        if hasattr(self, '_executor'):
+            self._executor.shutdown(wait=False)

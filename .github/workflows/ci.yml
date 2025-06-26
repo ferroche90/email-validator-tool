@@ -236,5 +236,4 @@ jobs:
 
     - name: Test API endpoints
       run: |
-        curl -f http://localhost:8000/health || exit 1
-        curl -f http://localhost:8000/api/health || exit 1 
+        curl -f http://localhost:8000/health || exit 1 

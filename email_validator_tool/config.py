@@ -1,39 +1,96 @@
+import os
 from functools import lru_cache
 from typing import Optional
 
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     """Configuration settings for the email validator"""
 
+    # Environment configuration
+    ENVIRONMENT: str = Field(default="dev", description="Environment: dev or prod")
+    DEBUG: bool = Field(default=True, description="Debug mode")
+
+    # JWT Configuration
+    JWT_SECRET_KEY: str = Field(default="dev-secret-key-change-in-production", description="JWT secret key")
+    JWT_ALGORITHM: str = Field(default="HS256", description="JWT algorithm")
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=60, description="JWT token expiration in minutes")
+    
+    # API Keys for JWT token generation
+    API_KEY_USER: str = Field(default="user_api_key_here", description="API key for user role")
+    API_KEY_ADMIN: str = Field(default="admin_api_key_here", description="API key for admin role")
+
+    # Database
+    DATABASE_URL: str = Field(default="sqlite:///app.db", description="Database connection URL")
+
+    # Logging
+    LOG_LEVEL: str = Field(default="INFO", description="Logging level")
+
+    # CORS
+    CORS_ORIGINS: str = Field(default="*", description="CORS allowed origins")
+
+    # Rate Limiting
+    RATE_LIMIT_PER_MINUTE: int = Field(default=60, description="Rate limit per minute")
+
     # SMTP settings
-    SMTP_TIMEOUT: int = 10
-    SMTP_PORT: int = 25
-    MAX_CONCURRENT_CONNECTIONS: int = 10
-
-    # Optional features
-    ENABLE_CATCH_ALL: bool = False
-    ENABLE_SMTP: bool = False
-
-    # Validation thresholds
-    MIN_MX_RECORDS: int = 1
-    MAX_BOUNCE_RATE: float = 0.1
-
-    # General parameters
-    CSV_INPUT_PATH: str = "emails.csv"
-    CSV_OUTPUT_PATH: str = "results.csv"
-
-    # Concurrency and timeouts
-    PER_DOMAIN_DELAY_SECONDS: float = 5.0
+    SMTP_TIMEOUT: int = Field(default=10, description="SMTP timeout in seconds")
+    SMTP_PORT: int = Field(default=25, description="SMTP port")
+    MAX_CONCURRENT_CONNECTIONS: int = Field(default=10, description="Maximum concurrent connections")
+    PER_DOMAIN_DELAY_SECONDS: float = Field(default=1.0, description="Delay between requests to the same domain")
 
     # DNS Cache settings
-    ENABLE_DNS_CACHE: bool = True
-    DNS_CACHE_TTL_SECONDS: int = 3600  # 1 hour default
+    ENABLE_DNS_CACHE: bool = Field(default=True, description="Enable DNS cache")
+    DNS_CACHE_TTL_SECONDS: int = Field(default=3600, description="DNS cache TTL in seconds")
+    CATCH_ALL_CACHE_TTL_SECONDS: int = Field(default=3600, description="Catch-all cache TTL in seconds")
+
+    # Validation settings
+    ENABLE_SMTP: bool = Field(default=False, description="Enable SMTP validation")
+    ENABLE_CATCH_ALL: bool = Field(default=False, description="Enable catch-all detection")
+
+    # CSV settings
+    CSV_INPUT_PATH: str = Field(default="emails.csv", description="Input CSV file path")
+    CSV_OUTPUT_PATH: str = Field(default="results.csv", description="Output CSV file path")
 
     class Config:
         env_file = ".env"
-        case_sensitive = True
+        case_sensitive = False
+
+    def __init__(self, **kwargs):
+        # Load environment-specific .env file before initializing
+        self._load_environment_file()
+        
+        # Validate production settings
+        self._validate_production_settings()
+        
+        super().__init__(**kwargs)
+
+    def _load_environment_file(self):
+        """Load environment-specific .env file based on ENVIRONMENT variable"""
+        from dotenv import load_dotenv
+
+        # Get environment from OS-level variable first, then default to dev
+        environment = os.getenv("ENVIRONMENT", "dev")
+        
+        # Determine which .env file to load
+        env_file = f".env.{environment}"
+        
+        # Load the environment-specific file if it exists
+        if os.path.exists(env_file):
+            load_dotenv(env_file)
+        else:
+            # Fallback to .env if environment-specific file doesn't exist
+            if os.path.exists(".env"):
+                load_dotenv(".env")
+
+    def _validate_production_settings(self):
+        """Validate that production settings are secure"""
+        environment = os.getenv("ENVIRONMENT", "dev")
+        debug = os.getenv("DEBUG", "true").lower() == "true"
+        
+        if environment == "prod" and debug:
+            raise RuntimeError("DEBUG must be false in production environment")
 
 
 # Global settings instance

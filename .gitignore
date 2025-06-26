@@ -98,9 +98,11 @@ celerybeat.pid
 
 # Environments
 .env
+.env.dev
+.env.prod
+frontend/.env
 .venv/
 venv/
-env/
 env.bak/
 venv.bak/
 
@@ -131,5 +133,10 @@ cython_debug/
 results.csv
 *.csv
 *.db
+
+# API Key Management - DO NOT COMMIT
+data/
+data/*
+!data/.gitkeep
 
 node_modules/

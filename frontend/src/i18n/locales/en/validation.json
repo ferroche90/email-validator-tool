@@ -1,0 +1,22 @@
+{
+  "status": {
+    "valid": "Valid",
+    "invalid_syntax": "Invalid Syntax",
+    "invalid_domain": "Invalid Domain",
+    "invalid_mx": "Invalid MX",
+    "invalid_smtp": "Invalid SMTP",
+    "disposable": "Disposable",
+    "role_account": "Role Account",
+    "spamtrap": "Spam Trap",
+    "abuse": "Abuse",
+    "suppressed": "Suppressed",
+    "on_bounce_list": "On Bounce List",
+    "catch_all": "Catch All",
+    "unknown_error": "Unknown Error"
+  },
+  "messages": {
+    "noEmails": "No email addresses provided",
+    "validationComplete": "Validation complete",
+    "validationFailed": "Validation failed"
+  }
+} 

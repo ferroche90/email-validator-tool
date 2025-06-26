@@ -7,6 +7,6 @@ export default defineConfig({
   define: {
     // Expose environment variables to the client
     'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL),
-    'process.env.VITE_API_TOKEN': JSON.stringify(process.env.VITE_API_TOKEN),
+    'process.env.VITE_API_KEY': JSON.stringify(process.env.VITE_API_KEY),
   },
 })

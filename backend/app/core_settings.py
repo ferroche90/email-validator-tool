@@ -2,5 +2,8 @@ from email_validator_tool.config import Settings
 
 
 class BackendSettings(Settings):
-    # Extend with backend-specific settings if needed
+    """Backend-specific settings extending the core Settings class"""
+    
+    # Backend-specific settings can be added here
+    # For now, we inherit all settings from the core Settings class
     pass
