@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { AxiosRequestHeaders } from 'axios'
 import { obtainJwtToken } from './useAuth'
 
 // Singleton Axios instance used across the SPA
@@ -17,7 +18,7 @@ api.interceptors.request.use(async (config) => {
       config.headers = {
         ...(config.headers as Record<string, string> | undefined),
         Authorization: `Bearer ${token}`,
-      } as any
+      } as AxiosRequestHeaders
     }
   } catch (err) {
     // If we fail to obtain a token we still let the request continue; backend

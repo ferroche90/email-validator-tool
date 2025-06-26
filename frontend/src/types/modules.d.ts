@@ -1,8 +1,10 @@
 declare module '@mui/material' {
-  export const LinearProgress: any
-  export const Box: any
-  export const Typography: any
-  export const Button: any
+  import type { ComponentType, ReactNode } from 'react'
+  
+  export const LinearProgress: ComponentType<{ [key: string]: unknown }>
+  export const Box: ComponentType<{ children?: ReactNode; [key: string]: unknown }>
+  export const Typography: ComponentType<{ children?: ReactNode; [key: string]: unknown }>
+  export const Button: ComponentType<{ children?: ReactNode; [key: string]: unknown }>
 }
 
 declare module 'papaparse' {

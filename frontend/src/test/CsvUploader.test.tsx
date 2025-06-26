@@ -15,7 +15,6 @@ vi.mock('@mui/material', () => {
 
 // Mock Papa.parse to synchronously parse CSV for the test environment
 vi.mock('papaparse', async () => {
-  const actual: any = await vi.importActual('papaparse')
   return {
     default: {
       parse: (file: File, options: any) => {

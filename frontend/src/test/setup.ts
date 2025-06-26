@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
+import type { AxiosInstance } from 'axios'
 
 // Mock fetch globally
 global.fetch = vi.fn()
@@ -35,6 +36,6 @@ const mockAxiosInstance = {
       use: vi.fn()
     }
   }
-}
+} as unknown as AxiosInstance
 
-vi.mocked(mockAxios.default.create).mockReturnValue(mockAxiosInstance as any) 
+vi.mocked(mockAxios.default.create).mockReturnValue(mockAxiosInstance) 

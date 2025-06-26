@@ -1,5 +1,5 @@
 declare module '*.json' {
-  const value: any
+  const value: Record<string, unknown>
   export default value
 }
 
@@ -15,15 +15,15 @@ declare module 'i18next' {
     /**
      * Allows plugins (e.g. initReactI18next) to be attached to the i18next instance.
      * The concrete plugin type is not important for our simplified typings, so we
-     * accept `any` and return `this` to keep the fluent interface intact.
+     * accept a generic plugin type and return `this` to keep the fluent interface intact.
      */
-    use(module: any): this
+    use(module: Record<string, unknown>): this
     /**
      * Initializes the i18next instance. We don't need strict typings for the
-     * options object here – using `any` keeps the stub simple while silencing
+     * options object here – using a generic options type keeps the stub simple while silencing
      * the compiler.
      */
-    init(options: any): this
+    init(options: Record<string, unknown>): this
   }
   
   const i18nInstance: i18n
@@ -48,9 +48,8 @@ declare module 'react-i18next' {
 
   /**
    * Re-exported plugin that binds the given i18next instance to React.
-   * Typing it as `any` is sufficient for our local usage as we don't rely on
+   * Typing it as a generic plugin type is sufficient for our local usage as we don't rely on
    * its shape – we only need it to satisfy TypeScript when we import it.
    */
-  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-  export const initReactI18next: any
+  export const initReactI18next: Record<string, unknown>
 } 
