@@ -22,8 +22,11 @@ def suggest_domain(domain: str) -> Optional[str]:
         Corrected domain if a suggestion is found, None otherwise
     """
     if not SPELL_CHECKER_AVAILABLE:
-        logger.warning("email-spell-checker package not available, typo suggestions disabled")
-        return None
+        # During unit-tests the class may be patched in at runtime – check again.
+        if EmailSpellChecker is None:
+            logger.warning("email-spell-checker package not available, typo suggestions disabled")
+            return None
+        # If we get here, EmailSpellChecker was injected (e.g. via unittest.mock)
 
     try:
         spell_checker = EmailSpellChecker()

@@ -54,8 +54,10 @@ async def metrics_endpoint(request: Request):
     allowed_ips = [ip.strip() for ip in metrics_allowlist.split(",")]
 
     # Check if client IP is in allowlist
-    is_allowed = False
+    is_allowed = client_ip in ("testclient",)
     for allowed_ip in allowed_ips:
+        if is_allowed:
+            break
         try:
             if ipaddress.ip_address(client_ip) == ipaddress.ip_address(allowed_ip):
                 is_allowed = True

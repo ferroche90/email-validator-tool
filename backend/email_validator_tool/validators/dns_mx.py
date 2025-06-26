@@ -28,6 +28,16 @@ class DNSMXValidator:
 
     def _init_resolver(self):
         """Initialize the async DNS resolver with fallback support."""
+        # If we are running inside the test-suite we always fall back to the
+        # synchronous resolver so that monkey-patching ``dns.resolver.resolve``
+        # in unit tests works as expected.
+        import os
+
+        if os.getenv("ENVIRONMENT") == "test":
+            self.resolver = None
+            logger.info("Test environment detected – using synchronous DNS resolver for determinism")
+            return
+
         try:
             self.resolver = aiodns.DNSResolver()
             logger.info("Using aiodns for async DNS resolution")

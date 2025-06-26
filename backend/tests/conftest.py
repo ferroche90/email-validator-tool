@@ -7,15 +7,24 @@ import time
 from unittest.mock import patch
 
 import pytest
-from app.main import app
+from app.main import app, limiter as _global_limiter
 from email_validator_tool.core.pipeline import ValidationPipeline
 from email_validator_tool.core.results import ValidationResult
 from fastapi.testclient import TestClient
+from app.api import routes as _routes_module
 
 # Set test environment variables to increase rate limits for testing
 os.environ["ENVIRONMENT"] = "test"
 os.environ["JWT_ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
 os.environ["RATE_LIMIT_PER_MINUTE"] = "1000"  # High rate limit for tests
+
+# Disable SlowAPI rate limiting completely during the entire test run
+_global_limiter.enabled = False
+_routes_module.limiter.enabled = False
+
+from email_validator_tool.key_manager import create_key_manager
+import sqlite3
+from email_validator_tool.validators.suppression import SUPPRESSION_DB_PATH, setup_suppression_database
 
 
 @pytest.fixture
@@ -68,8 +77,6 @@ def client():
 
         with TestClient(app) as test_client:
             # Create the expected API keys in the key manager for testing
-            from email_validator_tool.key_manager import create_key_manager
-
             key_manager = create_key_manager()
 
             # Create test API keys if they don't exist
@@ -109,3 +116,41 @@ def get_token_safely(client: TestClient, api_key: str, max_retries: int = 3):
             pytest.fail(f"Token request failed with status {response.status_code}: {response.text}")
 
     pytest.fail("Failed to obtain token after all retries")
+
+
+@pytest.fixture(scope="session")
+def setup_test_api_keys():
+    """Ensure the well-known test API keys exist and return the key manager instance."""
+    key_manager = create_key_manager()
+
+    # Known test keys used across many integration-tests
+    predefined = {"test_user_api_key": "user", "test_admin_api_key": "admin"}
+
+    for api_key, role in predefined.items():
+        if not key_manager.validate_key(api_key):
+            generated = key_manager.create_key(role)
+            # Replace generated key entry with our fixed value so tests are deterministic
+            key_manager.keys[api_key] = key_manager.keys.pop(generated.key)
+            key_manager.keys[api_key].key = api_key
+            key_manager._save_keys()
+
+    # Also start each test session with an **empty** suppression DB so suppression tests are deterministic
+    setup_suppression_database()
+    try:
+        conn = sqlite3.connect(str(SUPPRESSION_DB_PATH))
+        conn.execute("DELETE FROM suppressions")
+        conn.commit()
+    finally:
+        conn.close()
+
+    return key_manager
+
+
+@pytest.fixture
+def benchmark():
+    """Tiny stub replacement for the real pytest-benchmark fixture (not installed in CI)."""
+
+    def _run(func, *args, **kwargs):
+        return func(*args, **kwargs)
+
+    return _run

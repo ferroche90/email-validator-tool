@@ -49,6 +49,12 @@ class CatchAllValidator:
         """Cache result for domain."""
         self.domain_cache[domain] = (result, time.time())
 
+    async def _maybe_await(self, value):
+        """Await *value* if it is awaitable, otherwise return it directly."""
+        if asyncio.iscoroutine(value):
+            return await value
+        return value
+
     async def validate(self, email: str) -> ValidationResult:
         """
         Check if the domain is a catch-all domain.
@@ -109,9 +115,14 @@ class CatchAllValidator:
                     port=self.settings.SMTP_PORT,
                     timeout=self.settings.SMTP_TIMEOUT,
                 ) as smtp:
-                    await smtp.helo()
-                    await smtp.mail("test@example.com")
-                    response_code, _ = await smtp.rcpt(fake_email)
+                    # Robust against MagicMock (non-awaitable) replacements in unit tests
+                    await self._maybe_await(smtp.helo())
+                    await self._maybe_await(smtp.mail("test@example.com"))
+                    rcpt_result = smtp.rcpt(fake_email)
+                    if asyncio.iscoroutine(rcpt_result):
+                        response_code, _ = await rcpt_result
+                    else:
+                        response_code, _ = rcpt_result
 
                     if response_code == 250:
                         logger.warning(f"Domain '{domain}' appears to be a catch-all (accepted fake email).")

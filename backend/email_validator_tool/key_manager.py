@@ -160,7 +160,7 @@ def create_key_manager() -> KeyManager:
     return KeyManager(data_dir=str(data_dir))
 
 
-def generate_jwt_for_key(api_key: str, role: str) -> str:
+def generate_jwt_for_key(api_key: str, role: str, *args, **kwargs) -> str:
     """Generate a JWT token for an API key."""
     # Use the same import path as the rest of the backend to avoid loading
     # the SQLModel metadata twice ("backend.app..." vs "app...").
