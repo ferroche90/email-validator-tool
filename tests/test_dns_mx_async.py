@@ -1,9 +1,9 @@
 """Benchmark tests for async DNS MX validator."""
 
-import pytest
 import asyncio
-from email_validator_tool.validators.dns_mx import DNSMXValidator
 
+import pytest
+from email_validator_tool.validators.dns_mx import DNSMXValidator
 
 # Test domains for benchmarking
 TEST_DOMAINS = [

@@ -1,13 +1,13 @@
 """Tests for catch-all caching and throttling functionality."""
 
-import pytest
-import time
 import asyncio
-import dns.resolver
-from unittest.mock import patch, MagicMock
+import time
+from unittest.mock import MagicMock, patch
 
-from email_validator_tool.validators.catch_all import CatchAllValidator
+import dns.resolver
+import pytest
 from email_validator_tool.core.models import ValidationStatus
+from email_validator_tool.validators.catch_all import CatchAllValidator
 
 
 @pytest.mark.asyncio

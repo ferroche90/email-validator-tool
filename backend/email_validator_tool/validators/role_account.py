@@ -2,10 +2,9 @@
 Role account validator.
 """
 
-from loguru import logger
-
 from email_validator_tool.constants import COMMON_ROLE_ACCOUNTS
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
+from loguru import logger
 
 
 class RoleAccountValidator:

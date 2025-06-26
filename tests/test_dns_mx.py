@@ -2,7 +2,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from dns.resolver import NXDOMAIN, NoAnswer
-
 from email_validator_tool.core.models import ValidationStatus
 from email_validator_tool.validators.dns_mx import DNSMXValidator
 

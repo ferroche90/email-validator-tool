@@ -1,10 +1,8 @@
 """Tests for the SpamTrapValidator."""
 
 import pytest
-
 from email_validator_tool.core.models import ValidationStatus
 from email_validator_tool.validators.spam_trap import SpamTrapValidator
-
 
 # Use pytest-asyncio for async validator
 

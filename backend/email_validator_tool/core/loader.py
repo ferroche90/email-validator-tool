@@ -3,9 +3,8 @@ import os
 from pathlib import Path
 from typing import List
 
-from loguru import logger
-
 from email_validator_tool.core.models import ValidationResult
+from loguru import logger
 
 
 class EmailLoader:

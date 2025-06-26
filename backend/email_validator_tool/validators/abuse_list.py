@@ -1,10 +1,9 @@
 from pathlib import Path
 from typing import Set
 
-from loguru import logger
-
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
 from email_validator_tool.utils.paths import get_data_dir
+from loguru import logger
 
 # Default abuse list file location (relative to project root)
 _ABUSE_FILE = get_data_dir() / "abuse_list.txt"

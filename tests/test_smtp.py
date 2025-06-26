@@ -3,7 +3,6 @@ Tests for the SMTP validator.
 """
 
 import pytest
-
 from email_validator_tool.core.models import ValidationStatus
 from email_validator_tool.validators.smtp import SMTPValidator
 

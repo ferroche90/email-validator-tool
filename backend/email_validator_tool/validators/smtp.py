@@ -4,10 +4,10 @@ from typing import Dict
 
 import aiosmtplib
 import dns.resolver
-from loguru import logger
-
 from email_validator_tool.config import get_settings
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
+from loguru import logger
+
 from .throttle import enforce_domain_delay
 
 # Throttling handled via validators.throttle module

@@ -2,10 +2,9 @@ import sqlite3
 from pathlib import Path
 from typing import Set
 
-from loguru import logger
-
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
 from email_validator_tool.utils.paths import get_data_dir
+from loguru import logger
 
 # Update SUPPRESSION_DB_PATH to use the data directory
 SUPPRESSION_DB_PATH = get_data_dir() / "suppression_list.db"

@@ -12,11 +12,10 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from cryptography.fernet import Fernet
-from loguru import logger
-from tabulate import tabulate
-
 from email_validator_tool.config import get_settings
 from email_validator_tool.utils.paths import get_data_dir
+from loguru import logger
+from tabulate import tabulate
 
 
 class APIKey:

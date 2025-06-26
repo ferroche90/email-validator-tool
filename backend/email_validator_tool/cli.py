@@ -2,14 +2,13 @@ import asyncio
 from pathlib import Path
 
 import typer
-from loguru import logger
-from tabulate import tabulate
-
 from email_validator_tool.config import update_settings
 from email_validator_tool.core.loader import EmailLoader
 from email_validator_tool.core.pipeline import ValidationPipeline
 from email_validator_tool.core.results import generate_summary
 from email_validator_tool.key_manager import create_key_manager, generate_jwt_for_key
+from loguru import logger
+from tabulate import tabulate
 
 app = typer.Typer(
     name="email-validator",

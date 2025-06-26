@@ -1,8 +1,7 @@
 from typing import Dict, List
 
-from loguru import logger
-
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
+from loguru import logger
 
 
 def generate_summary(results: List[ValidationResult]) -> None:

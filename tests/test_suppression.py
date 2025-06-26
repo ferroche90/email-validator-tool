@@ -1,7 +1,6 @@
 """Tests for the SuppressionValidator."""
 
 import pytest
-
 from email_validator_tool.core.models import ValidationStatus
 from email_validator_tool.validators.suppression import SuppressionValidator
 

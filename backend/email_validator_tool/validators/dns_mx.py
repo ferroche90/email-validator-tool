@@ -1,13 +1,12 @@
-import time
-from typing import Dict, Tuple
 import asyncio
+import time
 from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, Tuple
 
 import aiodns
 import dns.resolver
-from loguru import logger
-
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
+from loguru import logger
 
 
 class DNSMXValidator:

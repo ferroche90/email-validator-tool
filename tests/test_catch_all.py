@@ -3,7 +3,6 @@ Tests for the catch-all validator.
 """
 
 import pytest
-
 from email_validator_tool.core.models import ValidationStatus
 from email_validator_tool.validators.catch_all import CatchAllValidator
 

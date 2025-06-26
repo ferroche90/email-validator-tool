@@ -1,8 +1,8 @@
 """Tests for the TypoSuggestionValidator."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
+import pytest
 from email_validator_tool.core.models import ValidationStatus
 from email_validator_tool.core.typo_suggestions import suggest_domain
 from email_validator_tool.validators.typo_suggestion import TypoSuggestionValidator
