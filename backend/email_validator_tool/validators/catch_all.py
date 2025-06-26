@@ -10,9 +10,9 @@ from loguru import logger
 
 from email_validator_tool.config import get_settings
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
+from .throttle import enforce_domain_delay
 
-# Shared throttle dict with SMTPValidator
-_last_contact: Dict[str, float] = {}
+# Throttling handled via validators.throttle module
 
 def generate_random_string(k: int = 20) -> str:
     """Generate a random string of lowercase letters and digits."""
@@ -67,17 +67,8 @@ class CatchAllValidator:
                 logger.debug(f"Using cached catch-all result for domain: {domain}")
                 return self._get_cached_result(domain, email)
 
-            # Check and enforce delay between requests to the same domain
-            current_time = time.time()
-            if domain in _last_contact:
-                time_since_last = current_time - _last_contact[domain]
-                if time_since_last < self.settings.PER_DOMAIN_DELAY_SECONDS:
-                    delay = self.settings.PER_DOMAIN_DELAY_SECONDS - time_since_last
-                    logger.debug(f"Waiting {delay:.1f}s before checking catch-all for {domain}")
-                    await asyncio.sleep(delay)
-
-            # Update last contact time
-            _last_contact[domain] = time.time()
+            # Global throttle between validators
+            await enforce_domain_delay(domain)
 
             # Generate a random, non-existent email address
             fake_email = f"{generate_random_string()}@{domain}"
@@ -114,7 +105,7 @@ class CatchAllValidator:
             try:
                 async with aiosmtplib.SMTP(
                     hostname=mx_server,
-                    port=25,
+                    port=self.settings.SMTP_PORT,
                     timeout=self.settings.SMTP_TIMEOUT,
                 ) as smtp:
                     await smtp.helo()

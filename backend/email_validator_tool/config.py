@@ -18,10 +18,6 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = Field(default="HS256", description="JWT algorithm")
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=60, description="JWT token expiration in minutes")
     
-    # API Keys for JWT token generation
-    API_KEY_USER: str = Field(default="user_api_key_here", description="API key for user role")
-    API_KEY_ADMIN: str = Field(default="admin_api_key_here", description="API key for admin role")
-
     # Database
     DATABASE_URL: str = Field(default="sqlite:///app.db", description="Database connection URL")
 
@@ -53,6 +49,9 @@ class Settings(BaseSettings):
     CSV_INPUT_PATH: str = Field(default="emails.csv", description="Input CSV file path")
     CSV_OUTPUT_PATH: str = Field(default="results.csv", description="Output CSV file path")
 
+    # Data directory (can be overridden via env vars DATA_DIR or EMAIL_VALIDATOR_DATA_DIR)
+    DATA_DIR: Optional[str] = Field(default=None, description="Absolute path to the shared data directory", env="DATA_DIR")
+
     class Config:
         env_file = ".env"
         case_sensitive = False
@@ -64,7 +63,23 @@ class Settings(BaseSettings):
         # Validate production settings
         self._validate_production_settings()
         
+        # Let BaseSettings process env vars / kwargs first
         super().__init__(**kwargs)
+
+        # Ensure DATA_DIR has a concrete value.  We resolve it via helper if
+        # not provided explicitly (or via EMAIL_VALIDATOR_DATA_DIR env var).
+        from email_validator_tool.utils.paths import get_data_dir
+
+        if not self.DATA_DIR:
+            # Fall back to helper – this will also create the directory
+            self.DATA_DIR = str(get_data_dir())
+        else:
+            # If provided, make sure directory exists and normalise path
+            from pathlib import Path
+
+            data_path = Path(self.DATA_DIR).expanduser().resolve()
+            data_path.mkdir(parents=True, exist_ok=True)
+            self.DATA_DIR = str(data_path)
 
     def _load_environment_file(self):
         """Load environment-specific .env file based on ENVIRONMENT variable"""

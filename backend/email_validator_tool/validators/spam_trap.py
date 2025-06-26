@@ -5,9 +5,10 @@ import re
 from loguru import logger
 
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
+from email_validator_tool.utils.paths import get_data_dir
 
 # Default spamtrap file location (relative to project root)
-_SPAMTRAP_FILE = Path("data/spamtraps.txt")
+_SPAMTRAP_FILE = get_data_dir() / "spamtraps.txt"
 
 
 def _load_spamtrap_file() -> Set[str]:

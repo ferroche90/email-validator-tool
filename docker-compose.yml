@@ -4,7 +4,7 @@ services:
   api:
     build: ./backend
     environment:
-      - API_TOKEN=${API_TOKEN}
+      - API_KEY=${API_KEY}
     volumes:
       - ./backend/bounce_list.db:/app/bounce_list.db
     networks:

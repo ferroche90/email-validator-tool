@@ -13,7 +13,7 @@ describe('i18n Integration', () => {
     expect(screen.getByText('Email Validator')).toBeInTheDocument()
     
     // Check that the email input label is translated
-    expect(screen.getByText('Email Addresses (one per line)')).toBeInTheDocument()
+    expect(screen.getByLabelText('Email Addresses (one per line)')).toBeInTheDocument()
     
     // Check that the validate button is translated
     expect(screen.getByRole('button', { name: 'Validate' })).toBeInTheDocument()
@@ -22,7 +22,7 @@ describe('i18n Integration', () => {
   it('should show authentication status in English', () => {
     render(<EmailChecker />)
     
-    // The component should show authentication loading state
-    expect(screen.getByText('Authenticating...')).toBeInTheDocument()
+    // The component should show authentication status
+    expect(screen.getByText('Authenticated with JWT')).toBeInTheDocument()
   })
 }) 

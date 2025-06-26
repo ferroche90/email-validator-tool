@@ -18,16 +18,15 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Python requirements and install
-COPY requirements.txt ./requirements.txt
-
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy pyproject.toml and install dependencies
+COPY pyproject.toml ./pyproject.toml
+RUN pip install --no-cache-dir -e .[backend]
 
 # Copy backend application code so that it is importable as top-level "app"
 COPY backend/app ./app
 
 # Copy shared library used by backend (main package)
-COPY email_validator_tool ./email_validator_tool
+COPY backend/email_validator_tool ./email_validator_tool
 
 # Copy frontend build from previous stage
 COPY --from=frontend-builder /app/dist ./static

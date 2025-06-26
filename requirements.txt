@@ -1,40 +1,31 @@
 # Core dependencies
 email-validator>=2.2.0
-
-# DNS and email domain utilities
 dnspython>=2.7.0
 disposable-email-domains>=0.0.126
-
-# CLI
 typer>=0.16.0
-
-# Async support
 asyncio>=3.4.3
 aiosmtplib>=4.0.1
-
-# Logging
 loguru>=0.7.3
-
-# Data validation
 pydantic>=2.10.0
 pydantic-settings>=2.0.0
+aiodns>=3.1.1
 
-# Testing
-pytest>=8.4.1
-pytest-asyncio>=1.0.0
-locust>=2.17.0
-
-# Code style and formatting
-black>=25.1.0
-isort>=6.0.1
-flake8>=7.2.0
-
-# Backend-specific dependencies
+# Backend-specific runtime requirements
 fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
-python-dotenv>=1.0.0
 slowapi>=0.1.0
+python-dotenv>=1.0.0
 httpx>=0.25.0
+
+# Database and authentication
+sqlmodel>=0.0.8
+alembic>=1.12.0
+bcrypt>=4.0.1
+PyJWT>=2.8.0
+pydantic[email]>=2.0.0
+
+# Observability
+prometheus-fastapi-instrumentator>=6.1.0
 
 # JWT Authentication
 python-jose[cryptography]>=3.3.0
@@ -43,5 +34,12 @@ python-jose[cryptography]>=3.3.0
 cryptography>=41.0.0
 tabulate>=0.9.0
 
-# Additional backend dependency
-aiodns>=3.1.1
+# Development dependencies (optional)
+pytest>=8.4.1
+pytest-asyncio>=1.0.0
+pytest-cov>=4.1.0
+pytest-benchmark>=4.0.0
+black>=25.1.0
+isort>=6.0.1
+flake8>=7.2.0
+locust>=2.17.0 

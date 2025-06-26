@@ -50,6 +50,10 @@ const getJWTToken = async (): Promise<string> => {
   }
 }
 
+// Expose the token-fetching utility so other modules (e.g. Axios interceptor)
+// can request a fresh JWT without duplicating logic.
+export const obtainJwtToken = async (): Promise<string> => getJWTToken();
+
 // Hook for authentication state
 export const useAuth = () => {
   const [authState, setAuthState] = useState<AuthState>({

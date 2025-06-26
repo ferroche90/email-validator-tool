@@ -5,15 +5,16 @@ from typing import Set
 from loguru import logger
 
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
+from email_validator_tool.utils.paths import get_data_dir
 
 # Update SUPPRESSION_DB_PATH to use the data directory
-SUPPRESSION_DB_PATH = Path("data/suppression_list.db")
+SUPPRESSION_DB_PATH = get_data_dir() / "suppression_list.db"
 
 
 def setup_suppression_database():
     """Create the suppressions table if it doesn't exist."""
     try:
-        conn = sqlite3.connect(SUPPRESSION_DB_PATH)
+        conn = sqlite3.connect(str(SUPPRESSION_DB_PATH))
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -40,7 +41,7 @@ def load_suppression_list() -> Set[str]:
     suppression_set = set()
     conn = None
     try:
-        conn = sqlite3.connect(SUPPRESSION_DB_PATH, timeout=10)
+        conn = sqlite3.connect(str(SUPPRESSION_DB_PATH), timeout=10)
         cursor = conn.cursor()
         cursor.execute("SELECT email FROM suppressions")
         rows = cursor.fetchall()
@@ -75,7 +76,7 @@ def add_suppressions(emails: Set[str]) -> int:
     conn = None
     added_count = 0
     try:
-        conn = sqlite3.connect(SUPPRESSION_DB_PATH, timeout=10)
+        conn = sqlite3.connect(str(SUPPRESSION_DB_PATH), timeout=10)
         cursor = conn.cursor()
         
         for email in emails:

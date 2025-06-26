@@ -15,14 +15,14 @@ FastAPI backend for the Email Validator Tool with multi-tenant support.
 
 ### Prerequisites
 
-- Python 3.11+
-- pip or poetry
+- Python 3.12+
+- pip
 
 ### Installation
 
 1. **Install dependencies**:
    ```bash
-   pip install -e .
+   pip install -e .[backend,dev]
    ```
 
 2. **Set up environment**:
@@ -33,7 +33,7 @@ FastAPI backend for the Email Validator Tool with multi-tenant support.
 
 3. **Run database migrations**:
    ```bash
-   alembic upgrade head
+   alembic -c alembic.ini upgrade head
    ```
 
 4. **Start the server**:
@@ -46,6 +46,7 @@ FastAPI backend for the Email Validator Tool with multi-tenant support.
 ### Authentication
 
 - `POST /api/signup` - Create new user account with organization
+- `POST /api/login` - User login with email/password
 - `POST /api/token` - Get JWT token (legacy API key support)
 
 ### Email Validation
@@ -93,13 +94,13 @@ pytest tests/test_auth.py -v
 
 ```bash
 # Create new migration
-alembic revision --autogenerate -m "description"
+alembic -c alembic.ini revision --autogenerate -m "description"
 
 # Apply migrations
-alembic upgrade head
+alembic -c alembic.ini upgrade head
 
 # Rollback migration
-alembic downgrade -1
+alembic -c alembic.ini downgrade -1
 ```
 
 ### Code Quality
@@ -109,20 +110,24 @@ alembic downgrade -1
 black app/ tests/
 
 # Lint code
-ruff check app/ tests/
+flake8 app/ tests/
 
-# Type checking
-mypy app/
+# Sort imports
+isort app/ tests/
 ```
 
 ## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | `sqlite:///./app.db` | Database connection string |
+| `DATABASE_URL` | `sqlite:///./data/email_validator.db` | Database connection string |
 | `JWT_SECRET_KEY` | `dev-secret-key...` | JWT signing secret |
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | Token expiration time |
-| `DEBUG` | `false` | Enable debug mode |
+| `DEBUG` | `true` | Enable debug mode |
+| `RATE_LIMIT_REQUESTS_PER_MINUTE` | `100` | Rate limit per minute |
+| `ENABLE_DNS_CACHE` | `true` | Enable DNS caching |
+| `ENABLE_SMTP` | `false` | Enable SMTP validation |
+| `ENABLE_CATCH_ALL` | `false` | Enable catch-all detection |
 
 ## Architecture
 
@@ -135,6 +140,12 @@ app/
 ├── database/      # Database models and connection
 ├── services/      # Business logic services
 └── main.py        # FastAPI application entry point
+
+email_validator_tool/
+├── core/          # Validation pipeline and models
+├── validators/    # Individual validation modules
+├── utils/         # Shared utilities
+└── cli.py         # CLI entry point
 ```
 
 ## Testing
@@ -151,7 +162,7 @@ The backend is designed to be deployed with Docker:
 
 ```bash
 # Build image
-docker build -t email-validator-backend .
+docker build -f backend/Dockerfile -t email-validator-backend .
 
 # Run container
 docker run -p 8000:8000 email-validator-backend

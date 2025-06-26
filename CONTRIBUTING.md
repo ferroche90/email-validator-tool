@@ -7,13 +7,12 @@ Thank you for your interest in contributing! This document outlines the developm
 ### Required Tools
 - **Docker** ≥ 24.0 (for full-stack development)
 - **Node.js** ≥ 18.0 (for frontend development)
-- **Python** ≥ 3.11 (for backend/core development)
+- **Python** ≥ 3.12 (for backend/core development)
 - **Make** (for build automation)
 - **Git** ≥ 2.30
 
 ### Optional Tools
 - **pnpm** (recommended for frontend package management)
-- **Poetry** (for Python dependency management)
 - **VS Code** with extensions:
   - Python
   - TypeScript and JavaScript
@@ -32,20 +31,29 @@ cd email-validator-tool
 ### 2. Environment Configuration
 ```bash
 # Copy environment templates
-cp infra/env/dev.example.env .env.dev
+cp infra/env/dev.example.env .env
 cp infra/env/frontend.example.env frontend/.env
 
-# Edit .env.dev and frontend/.env with your local settings
+# Edit .env and frontend/.env with your local settings
 ```
 
-### 3. Start Development Environment
+### 3. Install Dependencies
+```bash
+# Backend dependencies
+pip install -e .[backend,dev]
+
+# Frontend dependencies
+cd frontend && pnpm install
+```
+
+### 4. Start Development Environment
 ```bash
 # Full stack (recommended)
 make dev
 
 # Or individual services
-make api      # Backend only
-cd frontend && pnpm dev  # Frontend only
+make dev-backend      # Backend only
+make dev-frontend     # Frontend only
 ```
 
 ## Code Quality Standards
@@ -55,28 +63,27 @@ cd frontend && pnpm dev  # Frontend only
 #### Backend (Python)
 ```bash
 # Format code
-make format-backend
+make format
 
 # Lint code
-make lint-backend
+make lint
 
-# Type checking
-make type-check-backend
+# Sort imports
+isort backend/ tests/
 ```
 
 **Standards:**
-- **Black** for code formatting
-- **Ruff** for linting and import sorting
-- **MyPy** for type checking
+- **Black** for code formatting (120 chars)
+- **flake8** for linting
 - **isort** for import organization
 
 #### Frontend (TypeScript/React)
 ```bash
 # Format and lint
-make lint-frontend
+cd frontend && pnpm lint
 
-# Type checking
-make type-check-frontend
+# Fix linting issues
+cd frontend && pnpm lint:fix
 ```
 
 **Standards:**
@@ -89,10 +96,10 @@ make type-check-frontend
 #### Backend Tests
 ```bash
 # Run all backend tests
-make test-backend
+make test
 
 # Run with coverage
-make test-backend-coverage
+pytest --cov=backend --cov=email_validator_tool
 
 # Run specific test file
 pytest tests/test_specific.py -v
@@ -101,13 +108,13 @@ pytest tests/test_specific.py -v
 #### Frontend Tests
 ```bash
 # Run all frontend tests
-make test-frontend
+cd frontend && pnpm test
 
 # Run with coverage
-make test-frontend-coverage
+cd frontend && pnpm test:coverage
 
 # Run tests in watch mode
-cd frontend && pnpm test:ui
+cd frontend && pnpm test:watch
 ```
 
 **Coverage Requirements:**
@@ -118,10 +125,10 @@ cd frontend && pnpm test:ui
 ### Pre-commit Checks
 ```bash
 # Run all checks before committing
-make pre-commit
+make lint && make test
 
 # This runs:
-# - Backend: black, ruff, mypy, pytest
+# - Backend: black, flake8, pytest
 # - Frontend: eslint, prettier, vitest
 ```
 
@@ -177,7 +184,7 @@ test: add unit tests for email validation
 
 3. **Pre-commit Checks**
    ```bash
-   make pre-commit
+   make lint && make test
    ```
 
 4. **Push and Create PR**
@@ -208,42 +215,57 @@ test: add unit tests for email validation
 - **Documentation**: Is the code properly documented?
 
 ### Review Process
-1. **Automated Checks**: Ensure all CI checks pass
-2. **Code Review**: At least 2 maintainers must approve
-3. **Testing**: Verify tests pass locally
-4. **Documentation**: Check if documentation needs updates
+1. **Initial Review**: Check for obvious issues
+2. **Detailed Review**: Examine logic and implementation
+3. **Testing**: Verify tests are comprehensive
+4. **Documentation**: Ensure docs are updated
+5. **Approval**: Approve or request changes
 
-## Release Process
+## Project Structure
 
-### Versioning
-We follow [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH):
+### Backend
+```
+backend/
+├── app/                    # FastAPI application
+│   ├── api/               # API routes
+│   ├── auth/              # Authentication
+│   ├── database/          # Database models
+│   └── services/          # Business logic
+├── email_validator_tool/  # Core validation library
+│   ├── core/              # Validation pipeline
+│   ├── validators/        # Validation modules
+│   └── cli.py             # CLI entry point
+└── tests/                 # Test files
+```
 
-- **MAJOR**: Breaking changes
-- **MINOR**: New features (backward compatible)
-- **PATCH**: Bug fixes (backward compatible)
+### Frontend
+```
+frontend/
+├── src/
+│   ├── components/        # React components
+│   ├── lib/              # Utilities and hooks
+│   ├── types/            # TypeScript definitions
+│   └── i18n/             # Internationalization
+└── test/                 # Test files
+```
 
-### Release Steps
-1. Create release branch: `release/x.y.z`
-2. Update version numbers in:
-   - `pyproject.toml`
-   - `frontend/package.json`
-   - `CHANGELOG.md`
-3. Create PR and get approval
-4. Merge to main
-5. Create Git tag: `vx.y.z`
-6. CI automatically builds and deploys
+## Common Issues and Solutions
+
+### Backend Issues
+- **Import errors**: Ensure you're using `pip install -e .[backend,dev]`
+- **Database errors**: Run `alembic -c backend/alembic.ini upgrade head`
+- **JWT errors**: Check `JWT_SECRET_KEY` in `.env`
+
+### Frontend Issues
+- **API connection**: Verify `VITE_API_URL` in `frontend/.env`
+- **Authentication**: Check `VITE_API_KEY` matches backend
+- **Build errors**: Run `pnpm install` to update dependencies
 
 ## Getting Help
 
-- **Issues**: Use GitHub Issues for bug reports and feature requests
-- **Discussions**: Use GitHub Discussions for questions and ideas
-- **Slack**: Join our Slack channel for real-time discussions
-- **Documentation**: Check the docs folder for detailed guides
-
-## Code of Conduct
-
-Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing. We are committed to providing a welcoming and inclusive environment for all contributors.
-
----
+- **Documentation**: Check README.md and inline docs
+- **Issues**: Search existing issues before creating new ones
+- **Discussions**: Use GitHub Discussions for questions
+- **Slack**: Join #email-validator channel for real-time help
 
 Thank you for contributing to Email Validator Tool! 🚀 

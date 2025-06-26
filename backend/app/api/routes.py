@@ -1,7 +1,8 @@
 from typing import List
+import pathlib
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlmodel import Session, select
@@ -13,8 +14,10 @@ from email_validator_tool.validators.dns_mx import DNSMXValidator
 from email_validator_tool.validators.spam_trap import SpamTrapValidator
 from email_validator_tool.validators.abuse_list import AbuseListValidator
 from email_validator_tool.validators.suppression import SuppressionValidator
+from email_validator_tool.utils.paths import get_data_dir
+from email_validator_tool.logger import logger
 
-from app.auth.base import get_current_user_with_key_manager, require_role_hybrid
+from app.auth.base import get_current_user_with_key_manager, require_role
 from app.auth.jwt import create_access_token
 from app.database.database import get_session
 from app.database.models import User, Organization, UserCreate, UserResponse, OrganizationCreate
@@ -70,6 +73,17 @@ class SignupResponse(BaseModel):
 
 class SuppressionRequest(BaseModel):
     emails: List[str]
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
 
 
 def get_validator_service() -> EmailValidatorService:
@@ -208,7 +222,7 @@ async def validate_emails(
         
         # Record metrics for each validation result
         for result in results:
-            increment_emails_validated(result.status, organization_id)
+            increment_emails_validated(result["status"], organization_id)
         
         return {"results": results}
     except Exception as e:
@@ -217,7 +231,7 @@ async def validate_emails(
 
 @router.get("/cache-stats")
 @limiter.limit("5/minute")
-async def get_cache_stats(request: Request, user: dict = Depends(require_role_hybrid("admin"))):
+async def get_cache_stats(request: Request, user: dict = Depends(require_role("admin"))):
     """
     Get DNS cache statistics.
     Admin access required. Rate limited to 5 requests per minute.
@@ -235,7 +249,7 @@ async def get_cache_stats(request: Request, user: dict = Depends(require_role_hy
 
 @router.post("/cache-clear")
 @limiter.limit("5/minute")
-async def clear_cache(request: Request, user: dict = Depends(require_role_hybrid("admin"))):
+async def clear_cache(request: Request, user: dict = Depends(require_role("admin"))):
     """
     Clear DNS cache.
     Admin access required. Rate limited to 5 requests per minute.
@@ -252,7 +266,7 @@ async def clear_cache(request: Request, user: dict = Depends(require_role_hybrid
 
 @router.get("/bounce-stats")
 @limiter.limit("5/minute")
-async def get_bounce_stats(request: Request, user: dict = Depends(require_role_hybrid("admin"))):
+async def get_bounce_stats(request: Request, user: dict = Depends(require_role("admin"))):
     """
     Get bounce list statistics.
     Admin access required. Rate limited to 5 requests per minute.
@@ -262,7 +276,7 @@ async def get_bounce_stats(request: Request, user: dict = Depends(require_role_h
         return {
             "bounce_count": bounce_count,
             "loaded_in_memory": True,
-            "database_path": "bounce_list.db",
+            "database_path": str(pathlib.Path(get_data_dir()) / "bounce_list.db"),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting bounce stats: {str(e)}")
@@ -270,7 +284,7 @@ async def get_bounce_stats(request: Request, user: dict = Depends(require_role_h
 
 @router.post("/admin/reload-spamtraps")
 @limiter.limit("5/minute")
-async def reload_spamtraps(request: Request, user: dict = Depends(require_role_hybrid("admin"))):
+async def reload_spamtraps(request: Request, user: dict = Depends(require_role("admin"))):
     """Reload the spam-trap list from disk. Admin access required."""
     try:
         count = _global_spamtrap_validator.reload_spamtrap_list()
@@ -287,7 +301,7 @@ async def reload_spamtraps(request: Request, user: dict = Depends(require_role_h
 async def add_suppressions(
     request: Request,
     body: SuppressionRequest,
-    user: dict = Depends(require_role_hybrid("admin"))
+    user: dict = Depends(require_role("admin"))
 ):
     """Add emails to the suppression list. Admin access required."""
     try:
@@ -305,14 +319,14 @@ async def add_suppressions(
 
 @router.get("/admin/suppression-stats")
 @limiter.limit("5/minute")
-async def get_suppression_stats(request: Request, user: dict = Depends(require_role_hybrid("admin"))):
+async def get_suppression_stats(request: Request, user: dict = Depends(require_role("admin"))):
     """Get suppression list statistics. Admin access required."""
     try:
         suppression_count = _global_suppression_validator.get_suppression_count()
         return {
             "suppression_count": suppression_count,
             "loaded_in_memory": True,
-            "database_path": "suppression_list.db",
+            "database_path": str(pathlib.Path(get_data_dir()) / "suppression_list.db"),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting suppression stats: {str(e)}")
@@ -320,14 +334,50 @@ async def get_suppression_stats(request: Request, user: dict = Depends(require_r
 
 @router.get("/admin/abuse-stats")
 @limiter.limit("5/minute")
-async def get_abuse_stats(request: Request, user: dict = Depends(require_role_hybrid("admin"))):
+async def get_abuse_stats(request: Request, user: dict = Depends(require_role("admin"))):
     """Get abuse list statistics. Admin access required."""
     try:
         abuse_count = _global_abuse_validator.get_abuse_count()
         return {
             "abuse_count": abuse_count,
             "loaded_in_memory": True,
-            "file_path": "data/abuse_list.txt",
+            "file_path": str(pathlib.Path(get_data_dir()) / "abuse_list.txt"),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting abuse stats: {str(e)}")
+
+
+@router.post("/login", response_model=LoginResponse)
+@limiter.limit("20/minute")
+async def login(
+    request: Request,
+    login_data: LoginRequest,
+    session: Session = Depends(get_session),
+):
+    """Authenticate a user via email & password and return a JWT access token."""
+
+    user = session.exec(select(User).where(User.email == login_data.email)).first()
+
+    if not user or not user.verify_password(login_data.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="User account disabled")
+
+    payload = {
+        "sub": f"{user.role}_user",
+        "role": user.role,
+        "user_id": user.id,
+        "email": user.email,
+        "organization_id": user.organization_id,
+    }
+
+    access_token = create_access_token(payload)
+
+    return LoginResponse(
+        access_token=access_token,
+        user=UserResponse.from_orm(user),
+    )
