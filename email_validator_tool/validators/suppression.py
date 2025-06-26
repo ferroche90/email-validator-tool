@@ -6,8 +6,8 @@ from loguru import logger
 
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
 
-# Database file for suppressions
-SUPPRESSION_DB_PATH = Path("suppression_list.db")
+# Update SUPPRESSION_DB_PATH to use the data directory
+SUPPRESSION_DB_PATH = Path("data/suppression_list.db")
 
 
 def setup_suppression_database():

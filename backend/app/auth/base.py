@@ -54,37 +54,43 @@ def get_current_user(
 def get_current_user_with_key_manager(
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> dict:
-    """Get current user from JWT token (fallback to API key for backward compatibility)"""
+    """Get current user from JWT token or, for backward-compatibility, from a raw API key."""
     token = credentials.credentials
     payload = verify_token(token)
     
-    # Check if this is a database user token
+    # 1) Database-user JWTs (contain user_id)
     if "user_id" in payload:
-        # This is a database user, we need the session
-        # For now, return the payload with user info
         return {
             "user_id": payload.get("user_id"),
             "email": payload.get("email"),
             "role": payload.get("role"),
             "organization_id": payload.get("organization_id"),
-            "is_database_user": True
+            "is_database_user": True,
         }
-    
-    # Fallback to API key authentication (legacy)
+
+    # 2) API-key derived JWTs (contain role but no user_id)
+    if "role" in payload:
+        return {
+            "role": payload["role"],
+            "is_database_user": False,
+        }
+
+    # 3) Raw API key (legacy – bearer header contains the key itself)
     key_manager = create_key_manager()
     role = key_manager.validate_key(token)
-    
-    if not role:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    return {
-        "role": role,
-        "is_database_user": False
-    }
+
+    if role:
+        return {
+            "role": role,
+            "is_database_user": False,
+        }
+
+    # Token neither a valid JWT nor a known API key
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 def require_role(required_role: str):

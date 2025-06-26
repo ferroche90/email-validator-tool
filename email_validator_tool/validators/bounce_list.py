@@ -6,7 +6,8 @@ from loguru import logger
 
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
 
-DB_PATH = Path("bounce_list.db")
+# Update DB_PATH to use the data directory
+DB_PATH = Path("data/bounce_list.db")
 
 
 def setup_database():
