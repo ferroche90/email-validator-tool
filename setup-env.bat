@@ -13,11 +13,11 @@ if not exist "pyproject.toml" (
 
 REM Create backend environment file
 echo 📝 Creating backend environment file...
-if not exist ".env.dev" (
-    copy "infra\env\dev.example.env" ".env.dev"
-    echo ✅ Created .env.dev from template
+if not exist ".env" (
+    copy "infra\env\dev.example.env" ".env"
+    echo ✅ Created .env from template
 ) else (
-    echo ℹ️  .env.dev already exists, skipping...
+    echo ℹ️  .env already exists, skipping...
 )
 
 REM Create frontend environment file
@@ -39,14 +39,14 @@ echo.
 echo 🎉 Environment setup complete!
 echo.
 echo 📋 Next steps:
-echo 1. Review and update API keys in .env.dev
-echo 2. Review and update API key in frontend\.env
+echo 1. Review and update JWT_SECRET_KEY in .env
+echo 2. Review and update VITE_API_KEY in frontend\.env
 echo 3. Make sure VITE_API_KEY in frontend\.env matches a valid API key in your backend
-echo 4. Run 'make install' to install dependencies
+echo 4. Run 'pip install -e .[backend,dev]' to install dependencies
 echo 5. Run 'make dev' to start development servers
 echo.
 echo 🔐 Authentication:
-echo - The application now uses JWT authentication
+echo - The application uses JWT authentication
 echo - API keys are used to generate JWT tokens
 echo - Frontend automatically handles token management
 echo.

@@ -57,11 +57,11 @@ setup-dev:
 lint:
 	@echo Running linting checks...
 	@echo Running black...
-	@python -m black --check email_validator_tool tests backend
+	@python -m black --check tests backend
 	@echo Running isort...
-	@python -m isort --check-only email_validator_tool tests backend
+	@python -m isort --check-only tests backend
 	@echo Running flake8...
-	@python -m flake8 email_validator_tool tests backend --max-line-length=120
+	@python -m flake8 tests backend --max-line-length=120
 	@echo All linting checks passed!
 
 # Linting commands for Windows
@@ -96,7 +96,7 @@ test:
 
 install:
 	python -m venv venv
-	. venv/bin/activate && pip install -r requirements.txt
+	. venv/bin/activate && pip install -e .[backend,dev]
 
 # Development and deployment
 dev:

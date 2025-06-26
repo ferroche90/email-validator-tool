@@ -4,9 +4,10 @@ from typing import Set
 from loguru import logger
 
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
+from email_validator_tool.utils.paths import get_data_dir
 
 # Default abuse list file location (relative to project root)
-_ABUSE_FILE = Path("data/abuse_list.txt")
+_ABUSE_FILE = get_data_dir() / "abuse_list.txt"
 
 
 def _load_abuse_file() -> Set[str]:

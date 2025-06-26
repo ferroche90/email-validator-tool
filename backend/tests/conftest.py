@@ -67,10 +67,6 @@ def client():
         mock_settings.return_value.MAX_CONCURRENT_CONNECTIONS = 1
         mock_settings.return_value.SMTP_TIMEOUT = 1
         
-        # Set up test API keys
-        mock_settings.return_value.API_KEY_USER = "test_user_api_key"
-        mock_settings.return_value.API_KEY_ADMIN = "test_admin_api_key"
-
         with TestClient(app) as test_client:
             # Create the expected API keys in the key manager for testing
             from email_validator_tool.key_manager import create_key_manager

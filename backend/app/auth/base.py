@@ -105,18 +105,6 @@ def require_role(required_role: str):
     return role_checker
 
 
-def require_role_hybrid(required_role: str):
-    """Dependency to require a specific role (works with both database users and API keys)"""
-    def role_checker(user: dict = Depends(get_current_user_with_key_manager)) -> dict:
-        if user.get("role") != required_role:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Role '{required_role}' required"
-            )
-        return user
-    return role_checker
-
-
 def get_current_user_with_org(
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session)

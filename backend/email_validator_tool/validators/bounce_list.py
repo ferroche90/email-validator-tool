@@ -5,15 +5,16 @@ from typing import Set
 from loguru import logger
 
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
+from email_validator_tool.utils.paths import get_data_dir
 
 # Update DB_PATH to use the data directory
-DB_PATH = Path("data/bounce_list.db")
+DB_PATH = get_data_dir() / "bounce_list.db"
 
 
 def setup_database():
     """Create the bounces table if it doesn't exist."""
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(str(DB_PATH))
         cursor = conn.cursor()
         cursor.execute(
             """
@@ -39,7 +40,7 @@ def load_bounce_list() -> Set[str]:
     bounce_set = set()
     conn = None
     try:
-        conn = sqlite3.connect(DB_PATH, timeout=10)
+        conn = sqlite3.connect(str(DB_PATH), timeout=10)
         cursor = conn.cursor()
         cursor.execute("SELECT email FROM bounces")
         rows = cursor.fetchall()

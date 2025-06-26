@@ -8,9 +8,9 @@ from loguru import logger
 
 from email_validator_tool.config import get_settings
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
+from .throttle import enforce_domain_delay
 
-# Keep track of last contact time per domain
-_last_contact: Dict[str, float] = {}
+# Throttling handled via validators.throttle module
 
 
 class SMTPValidator:
@@ -34,17 +34,8 @@ class SMTPValidator:
             domain = email.split("@")[1]
             logger.debug(f"Checking SMTP deliverability for {email}")
 
-            # Check and enforce delay between requests to the same domain
-            current_time = time.time()
-            if domain in _last_contact:
-                time_since_last = current_time - _last_contact[domain]
-                if time_since_last < self.settings.PER_DOMAIN_DELAY_SECONDS:
-                    delay = self.settings.PER_DOMAIN_DELAY_SECONDS - time_since_last
-                    logger.debug(f"Waiting {delay:.1f}s before checking {domain}")
-                    await asyncio.sleep(delay)
-
-            # Update last contact time
-            _last_contact[domain] = time.time()
+            # Global throttle between validators
+            await enforce_domain_delay(domain)
 
             # Get MX records
             try:
@@ -73,7 +64,7 @@ class SMTPValidator:
             logger.debug(f"Checking {email} via MX {mx_host}")
 
             try:
-                async with aiosmtplib.SMTP(hostname=mx_host, port=25, timeout=self.settings.SMTP_TIMEOUT) as smtp:
+                async with aiosmtplib.SMTP(hostname=mx_host, port=self.settings.SMTP_PORT, timeout=self.settings.SMTP_TIMEOUT) as smtp:
                     # EHLO
                     await smtp.ehlo()
 

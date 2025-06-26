@@ -16,6 +16,7 @@ from loguru import logger
 from tabulate import tabulate
 
 from email_validator_tool.config import get_settings
+from email_validator_tool.utils.paths import get_data_dir
 
 
 class APIKey:
@@ -167,39 +168,11 @@ class KeyManager:
 
 
 def create_key_manager() -> KeyManager:
-    """Create a key manager instance."""
-    # Use absolute path to ensure consistent data directory across all components
-    import os
-    from pathlib import Path
-    
-    # Get the project root directory (where the main pyproject.toml is located)
-    current_dir = Path.cwd()
-    project_root = None
-    
-    # Walk up the directory tree to find the main project root
-    # Look for pyproject.toml with name = "email-validator-tool"
-    for parent in [current_dir] + list(current_dir.parents):
-        pyproject_file = parent / "pyproject.toml"
-        if pyproject_file.exists():
-            try:
-                # Read the pyproject.toml to check if it's the main project
-                with open(pyproject_file, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                    if 'name = "email-validator-tool"' in content:
-                        project_root = parent
-                        break
-            except Exception:
-                # If we can't read the file, continue searching
-                continue
-    
-    if project_root is None:
-        # Fallback to current directory if project root not found
-        data_dir = "data"
-    else:
-        # Use data directory in project root
-        data_dir = str(project_root / "data")
-    
-    return KeyManager(data_dir=data_dir)
+    """Create a key manager instance using the shared *data* directory."""
+    # Get absolute *data* directory path (and ensure it exists)
+    data_dir = get_data_dir()
+
+    return KeyManager(data_dir=str(data_dir))
 
 
 def generate_jwt_for_key(api_key: str, role: str) -> str:

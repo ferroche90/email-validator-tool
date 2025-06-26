@@ -48,16 +48,33 @@ Results are available via:
 ```text
 repo/
 ├─ backend/                # FastAPI app, Alembic migrations, services
-│  ├─ app/
-│  └─ tests/
-├─ email_validator_tool/   # Pure-Python core lib, CLI entry-points
+│  ├─ app/                 # FastAPI application layer
+│  │  ├─ api/             # REST API routes
+│  │  ├─ auth/            # JWT authentication
+│  │  ├─ database/        # SQLModel models and session
+│  │  ├─ services/        # Business logic adapters
+│  │  └─ main.py          # FastAPI app entry point
+│  ├─ email_validator_tool/   # Pure-Python core lib, CLI entry-points
+│  │  ├─ core/            # Validation pipeline and models
+│  │  ├─ validators/      # Individual validation modules
+│  │  ├─ utils/           # Shared utilities
+│  │  └─ cli.py           # CLI entry point
+│  ├─ alembic/            # Database migrations
+│  ├─ tests/              # Backend tests
+│  └─ Dockerfile          # Multi-stage Docker build
 ├─ frontend/               # Vite + React 19 SPA (TypeScript, Tailwind CSS)
-│  └─ src/test/            # Vitest + React-Testing-Library
+│  ├─ src/
+│  │  ├─ components/      # React components
+│  │  ├─ lib/             # API hooks and utilities
+│  │  ├─ types/           # TypeScript definitions
+│  │  └─ i18n/            # Internationalization
+│  └─ test/               # Vitest + React-Testing-Library
 ├─ infra/
-│  └─ env/                 # *.example.env templates for each tier
+│  └─ env/                # *.example.env templates for each tier
 ├─ loadtest/               # Locust load-testing scenarios
 ├─ docs/                   # ADRs, architecture diagrams, etc.
 ├─ docker-compose.yml      # Spins up API + Caddy reverse-proxy
+├─ pyproject.toml          # Python package configuration
 └─ Makefile                # One-liners for common dev tasks
 ```
 
@@ -71,20 +88,21 @@ repo/
 | Disposable Domains | blocklists refreshed daily | ✓ | ✓ | ✓ | 120 k+ domains |
 | Role Accounts | `info@`, `sales@` | ✓ | ✓ | ✓ | Configurable list |
 | Provider Type | B2B / Freemail heuristic | ✓ | ✓ | ✓ | MX patterns |
-| DNS / MX | async aiodns cache | ✓ | ✓ | CLI flag `--enable-catch-all` |
-| Catch-All Detection | RCPT-TO probing | ✓ | ✓ | CLI flag |
-| SMTP Validation | 3-way handshake | ✓ | ✓ | CLI flag `--enable-smtp` |
-| Abuse / Bounce Lists | internal SQLite store | ✓ | ✓ | Admin only |
-| Rate Limiting | sliding-window per JWT | – | ✓ | via `slowapi` |
+| DNS / MX | async aiodns cache | ✓ | ✓ | ✓ | CLI flag `--enable-catch-all` |
+| Catch-All Detection | RCPT-TO probing | ✓ | ✓ | ✓ | CLI flag |
+| SMTP Validation | 3-way handshake | ✓ | ✓ | ✓ | CLI flag `--enable-smtp` |
+| Abuse / Bounce Lists | internal SQLite store | ✓ | ✓ | ✓ | Admin only |
+| Rate Limiting | sliding-window per JWT | – | ✓ | – | via `slowapi` |
+| Multi-tenancy | Organizations & Users | – | ✓ | – | SQLModel + JWT |
 
 ---
 
 ## 4. Technology Stack
-* **Python 3.11+** – core library & FastAPI backend  
+* **Python 3.12+** – core library & FastAPI backend  
 * **FastAPI 0.104+** – async REST endpoints  
 * **React 19 + Vite 5** – frontend SPA  
 * **SQLite / Postgres** – persistence (configurable via `DATABASE_URL`)  
-* **Redis (optional)** – shared DNS cache, rate-limit store  
+* **SQLModel** – SQLAlchemy + Pydantic integration  
 * **Docker & Caddy** – containerisation & TLS termination  
 * **GitHub Actions** – CI (lint, test, build, deploy)  
 * **Prometheus / Grafana** – metrics & dashboards (see `infra/observability/`)
@@ -104,8 +122,8 @@ Services:
 ### 5.2 Local Developer Setup
 ```bash
 # Backend + CLI
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt -e backend/ -e .
+python -m venv .venv && source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+pip install -e .[backend,dev]
 cp infra/env/dev.example.env .env
 alembic -c backend/alembic.ini upgrade head
 uvicorn backend.app.main:app --reload
@@ -124,7 +142,6 @@ Copy the relevant file to project root (`.env`) or `frontend/.env` and adjust:
 |----------|---------------|-------------|
 | `ENVIRONMENT` | `dev` | Runtime identifier (`prod` disables debug, etc.) |
 | `JWT_SECRET_KEY` | *change me* | 32-byte secret for signing JWTs |
-| `API_KEY_USER` / `API_KEY_ADMIN` | *change me* | API-key → JWT exchange |
 | `DATABASE_URL` | `sqlite:///./data/email_validator.db` | SQLAlchemy DSN |
 | `RATE_LIMIT_REQUESTS_PER_MINUTE` | `100` | Per-key sliding window |
 | `ENABLE_DNS_CACHE` | `true` | Toggle MX cache |
@@ -136,7 +153,7 @@ Copy the relevant file to project root (`.env`) or `frontend/.env` and adjust:
 ---
 
 ## 7. Command-Line Interface (CLI)
-Install core lib in editable mode (`pip install -e .`) then:
+Install the package with backend extras (`pip install -e .[backend]`) then:
 ```bash
 email-validator validate emails.csv results.csv \
   --enable-catch-all  --enable-smtp
@@ -153,12 +170,14 @@ Base URL defaults to `/` when served behind Caddy, or `/api` when served directl
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| `POST` | `/token` | API-Key | Exchange API-Key → JWT |
-| `POST` | `/validate` | Bearer | Validate one or many addresses |
+| `POST` | `/api/signup` | – | Create user account with organization |
+| `POST` | `/api/login` | – | User login (email/password) |
+| `POST` | `/api/token` | API-Key | Exchange API-Key → JWT |
+| `POST` | `/api/validate` | Bearer | Validate one or many addresses |
 | `GET` | `/health` | – | Liveness probe |
 | `GET` | `/metrics` | allow-list | Prometheus metrics |
-| `GET` | `/cache-stats` | Admin JWT | MX cache info |
-| `POST` | `/admin/reload-spamtraps` | Admin JWT | Refresh spam-trap list |
+| `GET` | `/api/cache-stats` | Admin JWT | MX cache info |
+| `POST` | `/api/admin/reload-spamtraps` | Admin JWT | Refresh spam-trap list |
 
 Swagger is available at `/docs` in non-prod environments.
 
@@ -198,76 +217,113 @@ Coverage ≥ 95 % is enforced by CI. `make lint` runs Black, Ruff and ESLint.
 ---
 
 ## 12. Database Migrations
-The backend ships Alembic migrations under `backend/alembic/versions/`.
 ```bash
-alembic -c backend/alembic.ini revision --autogenerate -m "my_change"
+# Create new migration
+alembic -c backend/alembic.ini revision --autogenerate -m "description"
+
+# Apply migrations
 alembic -c backend/alembic.ini upgrade head
+
+# Rollback
+alembic -c backend/alembic.ini downgrade -1
 ```
 
 ---
 
 ## 13. Load Testing
-Scripts reside in `loadtest/`. Quick run:
 ```bash
-locust -f loadtest/locustfile.py --host http://localhost:8000
+# Install locust
+pip install locust
+
+# Run load test
+locust -f loadtest/locustfile.py --host=http://localhost:8000
 ```
-The script auto-generates a 10 k email CSV if not present and supports JWT authentication via `/token`.
 
 ---
 
 ## 14. Deployment
-### Docker Image
+
+### 14.1 Render.com Deployment
+1. Fork this repository
+2. Update `render.yaml` with your repository URL
+3. Create a new Web Service on Render
+4. Configure environment variables (see `infra/env/prod.example.env`)
+5. Deploy
+
+### 14.2 Docker Deployment
 ```bash
-# Build multi-arch
-DOCKER_BUILDKIT=1 docker buildx build --platform linux/amd64,linux/arm64 -t registry.local/email-validator:latest .
+# Build and run with Docker Compose
+docker compose up --build -d
+
+# Or build individual containers
+docker build -f backend/Dockerfile -t email-validator-api .
+docker run -p 8000:8000 email-validator-api
 ```
-### Render.com
-A [Render Blueprint](render.yaml) is included; pushing to `main` auto-deploys staging.
+
+### 14.3 Manual Deployment
+```bash
+# Backend
+pip install -e .[backend]
+cp infra/env/prod.example.env .env
+# Edit .env with production values
+alembic -c backend/alembic.ini upgrade head
+uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+
+# Frontend
+cd frontend
+cp ../infra/env/frontend.prod.example.env .env
+# Edit .env with production values
+pnpm build
+# Serve dist/ directory with your web server
+```
 
 ---
 
 ## 15. Git & CI/CD Workflow
-* **Branches** – `main` (protected), `release/x.y.z`, `feature/*`, `fix/*`.  
-* **Commit messages** – Conventional Commits (`feat:`, `fix:`, `chore:` …).  
-* **PRs** – squash-merged after 2 approvals, lint & tests green.  
-* **GitHub Actions** – workflows in `.github/workflows/` run lint → test → build.
+1. **Feature branches** → `feature/description`
+2. **Pull requests** → `main` branch
+3. **CI checks**: lint, test, build
+4. **Deploy**: auto-deploy on merge to `main`
 
 ---
 
 ## 16. Code Style Guide
-* **Python** – [PEP-8], Black (line-length 100), Ruff for lint, MyPy strict mode.  
-* **TypeScript** – ESLint (Airbnb + React), Prettier.  
-* **Commits** – run `make pre-commit install` to enable hooks.
+* **Python**: Black (120 chars), isort, flake8
+* **TypeScript**: ESLint, Prettier
+* **Commits**: Conventional commits format
+* **Documentation**: Inline docstrings + README updates
 
 ---
 
 ## 17. Security & Compliance
-* The repo is **private**; sharing source is prohibited.  
-* Secrets **must not** be committed – use `.env.*` or your secret manager.  
-* JWT secret keys must be rotated every 90 days (see SOP-SEC-008).  
-* Only the `api` container exposes ports externally; Caddy terminates TLS and enforces HTTPS.
+* **JWT tokens** with configurable expiration
+* **Rate limiting** per IP/API key
+* **CORS** configuration for production
+* **Environment variables** for sensitive data
+* **API key management** with encrypted storage
 
 ---
 
 ## 18. Troubleshooting FAQ
-| Symptom | Possible Cause | Fix |
-|---------|----------------|-----|
-| `Import \"locust\" could not be resolved` | Locust not installed in interpreter | `pip install --user locust` |
-| `UNIQUE constraint failed: organization.slug` | Org slug collision on test seed | Drop DB `rm data/email_validator.db` |
-| 429 Too Many Requests | Rate-limit exceeded | Increase `RATE_LIMIT_REQUESTS_PER_MINUTE` or wait 60 s |
+
+### Q: "Module not found" errors
+A: Ensure you've installed with extras: `pip install -e .[backend,dev]`
+
+### Q: Frontend can't connect to API
+A: Check `VITE_API_URL` in `frontend/.env` and CORS settings
+
+### Q: Database migration errors
+A: Run `alembic -c backend/alembic.ini upgrade head`
+
+### Q: API key authentication fails
+A: Create new API key with `email-validator manage-keys create admin`
 
 ---
 
 ## 19. License
-Distributed under the **MIT license** (see [LICENSE](LICENSE)). Internal company use only.
+Internal use only – © Webatix
 
 ---
 
 ## 20. Contributors
-| Name | Role |
-|------|------|
-| John Doe | Maintainer |
-| Jane Smith | Frontend Lead |
-| Dev Team | Contributors |
-
-> _For access requests or questions ping **#email-validator** on Slack._ 
+* Fernando @ Webatix 

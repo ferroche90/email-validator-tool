@@ -8,21 +8,25 @@
 
 **Vision** – Provide a production-grade, cloud-agnostic service that validates e-mail lists fast, accurately and at scale.  The mono-repo ships:
 
-*  💻 **Backend** (`backend/`) – FastAPI micro-service exposed via `/api/*` plus Celery workers and adapters.
+*  💻 **Backend** (`backend/`) – FastAPI micro-service exposed via `/api/*` with multi-tenant support.
 *  🌐 **Frontend** (`frontend/`) – Vite + React 19 + Tailwind CSS single-page app.
-*  🧠 **Core lib** (`email_validator_tool/`) – Validator pipeline & pluggable rule engine, 100 % Python only.  Also published to PyPI.
-*  🐳 **Infra** (`docker-compose.yml`, `infra/`) – Dev/prod compose files, Caddy reverse-proxy, Postgres/Redis, etc.
-*  🧪 **Tests** (`tests/`, `backend/tests/`, `frontend/src/test/`) – Unified PyTest + Vitest suites.
+*  🧠 **Core lib** (`backend/email_validator_tool/`) – Validator pipeline & pluggable rule engine, 100 % Python only.  Also published to PyPI.
+*  🐳 **Infra** (`docker-compose.yml`, `infra/`) – Dev/prod compose files, Caddy reverse-proxy, SQLite/PostgreSQL, etc.
+*  🧪 **Tests** (`tests/`, `backend/tests/`, `frontend/test/`) – Unified PyTest + Vitest suites.
 
 ```
 repo/
-├─ backend/            # FastAPI app + services
-├─ email_validator_tool/  # Pure-Py core library
-├─ frontend/           # React SPA (Vite)
-├─ infra/              # Env templates & IaC snippets
-├─ docs/ (empty – put public docs here)
-├─ docker-compose.yml  # Orchestrates full stack
-└─ Makefile            # One-liners for dev & CI
+├─ backend/                    # FastAPI app + services
+│  ├─ app/                    # FastAPI application layer
+│  ├─ email_validator_tool/   # Pure-Py core library
+│  ├─ alembic/                # Database migrations
+│  └─ tests/                  # Backend tests
+├─ frontend/                  # React SPA (Vite)
+├─ infra/                     # Env templates & IaC snippets
+├─ docs/                      # Architecture docs & ADRs
+├─ docker-compose.yml         # Orchestrates full stack
+├─ pyproject.toml             # Python package config
+└─ Makefile                   # One-liners for dev & CI
 ```
 
 ---
@@ -33,20 +37,26 @@ repo/
 # 0) prerequisites: Docker ≥24 & Make
 
 # 1) clone + spin up everything
-make dev            # → docker compose -f docker-compose.yml up --build
+make dev            # → docker compose up --build
 
 # 2) front-end only hot-reload (outside Docker)
-(cd frontend && pnpm install && pnpm dev)
+cd frontend && pnpm install && pnpm dev
 
-# 3) run unit tests
+# 3) backend only (outside Docker)
+pip install -e .[backend,dev]
+uvicorn backend.app.main:app --reload
+
+# 4) run unit tests
 make test           # backend + core + frontend (Vitest)
 ```
 
 Shortcuts (`Makefile`):
 
 * `make dev` – full stack in watch mode.
-* `make api` – backend only.
-* `make lint` – black + ruff + ESLint.
+* `make dev-backend` – backend only.
+* `make dev-frontend` – frontend only.
+* `make lint` – black + flake8 + ESLint.
+* `make test` – run all tests.
 * `make clean` – stop & prune containers/volumes.
 
 ---
@@ -67,7 +77,7 @@ Release branches follow `release/x.y.z`; tags are semver.
 | Target          | Framework  | Command                  | Threshold |
 |-----------------|------------|--------------------------|-----------|
 | Core + Backend  | **PyTest** + `pytest-cov` | `make test` | ≥ 95 % |
-| Frontend        | **Vitest** + jsdom | `pnpm test`            | ≥ 95 % |
+| Frontend        | **Vitest** + jsdom | `cd frontend && pnpm test` | ≥ 95 % |
 
 Coverage reports are uploaded to Codecov; PRs with regression < threshold are blocked.
 
@@ -77,8 +87,8 @@ Coverage reports are uploaded to Codecov; PRs with regression < threshold are bl
 
 GitHub Actions workflows live in `.github/workflows/`.
 
-* **lint.yml** – ruff, black, isort, ESLint, prettier.
-* **test.yml** – matrix (py3.11, py3.12) + vitest.  Uploads coverage.
+* **lint.yml** – black, flake8, isort, ESLint, prettier.
+* **test.yml** – matrix (py3.12) + vitest.  Uploads coverage.
 * **build.yml** – build & push multi-arch Docker images on tag; triggers Render.com deploy.
 
 Branch protection rules require lint + test.
@@ -93,10 +103,11 @@ Branch protection rules require lint + test.
 | `DEBUG` | `true` | Verbose logging |
 | `JWT_SECRET_KEY` | `dev-secret-key…` | Sign JWTs |
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | Token TTL |
-| `API_KEY_*` | *see env* | API-Key → JWT exchange |
-| `DATABASE_URL` | `sqlite:///app.db` | SQLAlchemy DSN |
-| `RATE_LIMIT_PER_MINUTE` | `100` | Abuse control |
+| `DATABASE_URL` | `sqlite:///./data/email_validator.db` | SQLAlchemy DSN |
+| `RATE_LIMIT_REQUESTS_PER_MINUTE` | `100` | Abuse control |
 | `ENABLE_DNS_CACHE` | `true` | MX lookup cache |
+| `ENABLE_SMTP` | `false` | SMTP validation |
+| `ENABLE_CATCH_ALL` | `false` | Catch-all detection |
 | `VITE_API_URL` | `http://localhost:8000` | SPA → API base |
 | `VITE_API_KEY` | `test_admin_api_key` | Frontend auto-auth |
 
@@ -117,15 +128,38 @@ graph TD
 
   subgraph Backend
     API[FastAPI app] --> Core
-    API --> Redis[(Redis)]
-    API --> DB[(PostgreSQL)]
-    Core[Python core library\n(email_validator_tool)] -->|async tasks| Celery
-    Celery --> SMTP[(SMTP servers)]
-    Core --> DNS[(DNS/MX)]
+    API --> DB[(SQLite/PostgreSQL)]
+    Core[Python core library\n(email_validator_tool)] -->|async validation| Validators
+    Validators --> DNS[(DNS/MX)]
+    Validators --> SMTP[(SMTP servers)]
   end
 
   Core -.->|PyPI| Devs
 ```
+
+---
+
+## 8. Key Components
+
+### Backend Architecture
+- **FastAPI**: Modern async web framework
+- **SQLModel**: SQLAlchemy + Pydantic integration
+- **JWT Authentication**: Token-based auth with API key fallback
+- **Multi-tenancy**: Organizations and users with role-based access
+- **Rate Limiting**: Per-IP/API key rate limiting with slowapi
+
+### Core Library
+- **Validation Pipeline**: Async pipeline with pluggable validators
+- **DNS Caching**: Optional MX record caching
+- **SMTP Validation**: Optional mailbox verification
+- **CLI Interface**: Command-line tool for batch processing
+
+### Frontend
+- **React 19**: Latest React features
+- **TypeScript**: Full type safety
+- **JWT Management**: Automatic token refresh
+- **Internationalization**: EN/ES support
+- **CSV Processing**: Bulk email validation
 
 ---
 

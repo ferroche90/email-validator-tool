@@ -4,9 +4,10 @@ from typing import Set
 from loguru import logger
 
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
+from email_validator_tool.utils.paths import get_data_dir
 
 # Default free provider file location (relative to project root)
-_FREE_PROVIDERS_FILE = Path("data/free_providers.txt")
+_FREE_PROVIDERS_FILE = get_data_dir() / "free_providers.txt"
 
 
 def _load_free_providers_file() -> Set[str]:

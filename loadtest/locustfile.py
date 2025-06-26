@@ -98,7 +98,7 @@ class EmailValidatorUser(HttpUser):
         """Get access token for API authentication"""
         try:
             # Try to get token using API key (if available)
-            api_key = os.getenv('API_TOKEN', 'test-key')
+            api_key = os.getenv('API_KEY', 'test-key')
             response = self.client.post("/token", json={"api_key": api_key})
             
             if response.status_code == 200:

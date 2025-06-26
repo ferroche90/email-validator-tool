@@ -8,7 +8,7 @@ services:
     region: oregon
     dockerCommand: ['docker', 'compose', 'up', '-d', '--build']
     envVars:
-      - key: API_TOKEN
+      - key: JWT_SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
         value: sqlite:///app.db
@@ -16,9 +16,31 @@ services:
         value: INFO
       - key: CORS_ORIGINS
         value: "*"
-      - key: RATE_LIMIT_PER_MINUTE
+      - key: RATE_LIMIT_REQUESTS_PER_MINUTE
         value: "60"
-      - key: ADMIN_TOKEN
-        generateValue: true
+      - key: ENVIRONMENT
+        value: "prod"
+      - key: DEBUG
+        value: "false"
+      - key: ENABLE_DNS_CACHE
+        value: "true"
+      - key: DNS_CACHE_TTL_SECONDS
+        value: "3600"
+      - key: SMTP_TIMEOUT
+        value: "10"
+      - key: SMTP_PORT
+        value: "25"
+      - key: MAX_CONCURRENT_CONNECTIONS
+        value: "10"
+      - key: PER_DOMAIN_DELAY_SECONDS
+        value: "1.0"
+      - key: ENABLE_CATCH_ALL_DETECTION
+        value: "false"
+      - key: ENABLE_SMTP_VALIDATION
+        value: "false"
+      - key: METRICS_ALLOWLIST
+        value: "127.0.0.1,::1"
+      - key: ENABLE_METRICS
+        value: "true"
     healthCheckPath: /health
     autoDeploy: true 
