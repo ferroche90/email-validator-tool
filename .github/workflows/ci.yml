@@ -42,11 +42,11 @@ jobs:
         cd frontend
         pnpm install --no-frozen-lockfile
 
-    - name: Lint main Python code
+    - name: Lint root-level Python code (tests and other utilities) and the main package inside the backend
       run: |
-        black --check email_validator_tool tests
-        isort --check-only email_validator_tool tests
-        flake8 email_validator_tool tests --max-line-length=120
+        black --check backend/email_validator_tool tests
+        isort --check-only backend/email_validator_tool tests
+        flake8 backend/email_validator_tool tests --max-line-length=120
 
     - name: Lint backend Python code
       run: |
@@ -143,7 +143,7 @@ jobs:
 
     - name: Run security audit
       run: |
-        bandit -r email_validator_tool backend -f json -o bandit-report.json || true
+        bandit -r backend -f json -o bandit-report.json || true
         safety check --json --output safety-report.json || true
 
     - name: Upload security reports
