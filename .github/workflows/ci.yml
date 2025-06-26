@@ -44,9 +44,9 @@ jobs:
 
     - name: Lint root-level Python code (tests and other utilities) and the main package inside the backend
       run: |
-        black --check backend/email_validator_tool tests
-        isort --check-only backend/email_validator_tool tests
-        flake8 backend/email_validator_tool tests --max-line-length=120
+        black --check backend/email_validator_tool backend/tests
+        isort --check-only backend/email_validator_tool backend/tests
+        flake8 backend/email_validator_tool backend/tests --max-line-length=120
 
     - name: Lint backend Python code
       run: |
