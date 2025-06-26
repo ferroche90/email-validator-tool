@@ -88,3 +88,6 @@ addopts = [
     "--strict-config",
     "--asyncio-mode=auto",
 ]
+markers = [
+    "benchmark: mark performance benchmark tests",
+]
