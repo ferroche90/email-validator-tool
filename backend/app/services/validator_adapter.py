@@ -2,10 +2,10 @@ from typing import List, Optional
 
 from email_validator_tool.core.models import ValidationStatus
 from email_validator_tool.core.pipeline import ValidationPipeline
+from email_validator_tool.validators.abuse_list import AbuseListValidator
 from email_validator_tool.validators.bounce_list import BounceListValidator
 from email_validator_tool.validators.dns_mx import DNSMXValidator
 from email_validator_tool.validators.spam_trap import SpamTrapValidator
-from email_validator_tool.validators.abuse_list import AbuseListValidator
 from email_validator_tool.validators.suppression import SuppressionValidator
 
 

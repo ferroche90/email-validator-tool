@@ -1,27 +1,29 @@
-from typing import List
 import pathlib
+from typing import List
 
+from app.auth.base import get_current_user_with_key_manager, require_role
+from app.auth.jwt import create_access_token
+from app.database.database import get_session
+from app.database.models import (
+    Organization,
+    User,
+    UserResponse,
+)
+from app.metrics import increment_emails_validated, record_batch_size
+from email_validator_tool.config import get_settings
+from email_validator_tool.key_manager import create_key_manager
+from email_validator_tool.utils.paths import get_data_dir
+from email_validator_tool.validators.abuse_list import AbuseListValidator
+from email_validator_tool.validators.bounce_list import BounceListValidator
+from email_validator_tool.validators.dns_mx import DNSMXValidator
+from email_validator_tool.validators.spam_trap import SpamTrapValidator
+from email_validator_tool.validators.suppression import SuppressionValidator
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlmodel import Session, select
 
-from email_validator_tool.config import get_settings
-from email_validator_tool.key_manager import create_key_manager
-from email_validator_tool.validators.bounce_list import BounceListValidator
-from email_validator_tool.validators.dns_mx import DNSMXValidator
-from email_validator_tool.validators.spam_trap import SpamTrapValidator
-from email_validator_tool.validators.abuse_list import AbuseListValidator
-from email_validator_tool.validators.suppression import SuppressionValidator
-from email_validator_tool.utils.paths import get_data_dir
-from email_validator_tool.logger import logger
-
-from app.auth.base import get_current_user_with_key_manager, require_role
-from app.auth.jwt import create_access_token
-from app.database.database import get_session
-from app.database.models import User, Organization, UserCreate, UserResponse, OrganizationCreate
-from app.metrics import increment_emails_validated, record_batch_size
 from ..services.validator_adapter import EmailValidatorService
 
 # Rate limiter setup
@@ -107,28 +109,21 @@ async def signup(request: Request, signup_data: SignupRequest, session: Session 
     # Check if user already exists
     existing_user = session.exec(select(User).where(User.email == signup_data.email)).first()
     if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exists"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this email already exists")
+
     # Check if organization slug already exists
     existing_org = session.exec(select(Organization).where(Organization.slug == signup_data.organization_slug)).first()
     if existing_org:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Organization with this slug already exists"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Organization with this slug already exists"
         )
-    
+
     # Create organization
-    organization = Organization(
-        name=signup_data.organization_name,
-        slug=signup_data.organization_slug
-    )
+    organization = Organization(name=signup_data.organization_name, slug=signup_data.organization_slug)
     session.add(organization)
     session.commit()
     session.refresh(organization)
-    
+
     # Create user
     user = User(
         email=signup_data.email,
@@ -136,26 +131,23 @@ async def signup(request: Request, signup_data: SignupRequest, session: Session 
         first_name=signup_data.first_name,
         last_name=signup_data.last_name,
         organization_id=organization.id,
-        role="admin"  # First user in organization is admin
+        role="admin",  # First user in organization is admin
     )
     session.add(user)
     session.commit()
     session.refresh(user)
-    
+
     # Create JWT token
     payload = {
         "sub": user.email,
         "user_id": user.id,
         "email": user.email,
         "role": user.role,
-        "organization_id": user.organization_id
+        "organization_id": user.organization_id,
     }
     access_token = create_access_token(payload)
-    
-    return SignupResponse(
-        access_token=access_token,
-        user=UserResponse.from_orm(user)
-    )
+
+    return SignupResponse(access_token=access_token, user=UserResponse.from_orm(user))
 
 
 @router.post("/token", response_model=TokenResponse)
@@ -168,25 +160,16 @@ async def create_token(request: Request, token_request: TokenRequest):
     # Try to validate the API key using the key manager
     key_manager = create_key_manager()
     role = key_manager.validate_key(token_request.api_key)
-    
+
     if not role:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or revoked API key"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or revoked API key")
+
     # Create token payload (legacy API key tokens don't have organization_id)
-    payload = {
-        "sub": f"{role}_user",
-        "role": role
-    }
-    
+    payload = {"sub": f"{role}_user", "role": role}
+
     access_token = create_access_token(payload)
-    
-    return TokenResponse(
-        access_token=access_token,
-        role=role
-    )
+
+    return TokenResponse(access_token=access_token, role=role)
 
 
 @router.post("/validate")
@@ -210,20 +193,20 @@ async def validate_emails(
             session = next(get_session())
             user_obj = session.exec(select(User).where(User.id == user.get("user_id"))).first()
             organization_id = str(user_obj.organization_id) if user_obj and user_obj.organization_id else "unknown"
-        
+
         # Record batch size
         record_batch_size(organization_id, len(body.emails))
-        
+
         results = await validator_service.validate_many(
             emails=body.emails,
             enable_smtp=body.enable_smtp,
             enable_catch_all=body.enable_catch_all,
         )
-        
+
         # Record metrics for each validation result
         for result in results:
             increment_emails_validated(result["status"], organization_id)
-        
+
         return {"results": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Validation error: {str(e)}")
@@ -298,20 +281,17 @@ async def reload_spamtraps(request: Request, user: dict = Depends(require_role("
 
 @router.post("/admin/suppressions")
 @limiter.limit("5/minute")
-async def add_suppressions(
-    request: Request,
-    body: SuppressionRequest,
-    user: dict = Depends(require_role("admin"))
-):
+async def add_suppressions(request: Request, body: SuppressionRequest, user: dict = Depends(require_role("admin"))):
     """Add emails to the suppression list. Admin access required."""
     try:
         # Convert to set and normalize emails
         email_set = {email.strip().lower() for email in body.emails if email.strip()}
         added_count = _global_suppression_validator.add_suppressions(email_set)
+        total_suppressions = _global_suppression_validator.get_suppression_count()
         return {
             "added_count": added_count,
-            "total_suppressions": _global_suppression_validator.get_suppression_count(),
-            "message": f"Added {added_count} new suppressions. Total: {_global_suppression_validator.get_suppression_count()}",
+            "total_suppressions": total_suppressions,
+            "message": f"Added {added_count} new suppressions. Total: {total_suppressions}",
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error adding suppressions: {str(e)}")

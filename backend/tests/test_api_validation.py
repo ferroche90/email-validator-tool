@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+
 from .conftest import get_token_safely
 
 
@@ -34,12 +35,13 @@ def test_validate_emails(client: TestClient):
         # Rate limited - this is acceptable in test environment
         assert response.status_code == 429
 
+
 def test_validate_emails_endpoint(client, setup_test_api_keys):
     """Test the /api/validate endpoint."""
     # Get a JWT token first
     token = get_token_safely(client, "test_admin_api_key")
-    
-    response = client.post(
+
+    client.post(
         "/api/validate",
         json={
             "emails": ["test@example.com", "invalid-email", "another@example.com"],

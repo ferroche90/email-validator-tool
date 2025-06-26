@@ -3,15 +3,14 @@ Common test fixtures for email validator tests.
 """
 
 import os
-from unittest.mock import patch
 import time
+from unittest.mock import patch
 
 import pytest
 from app.main import app
-from fastapi.testclient import TestClient
-
 from email_validator_tool.core.pipeline import ValidationPipeline
 from email_validator_tool.core.results import ValidationResult
+from fastapi.testclient import TestClient
 
 # Set test environment variables to increase rate limits for testing
 os.environ["ENVIRONMENT"] = "test"
@@ -66,12 +65,13 @@ def client():
         mock_settings.return_value.ENABLE_CATCH_ALL = False
         mock_settings.return_value.MAX_CONCURRENT_CONNECTIONS = 1
         mock_settings.return_value.SMTP_TIMEOUT = 1
-        
+
         with TestClient(app) as test_client:
             # Create the expected API keys in the key manager for testing
             from email_validator_tool.key_manager import create_key_manager
+
             key_manager = create_key_manager()
-            
+
             # Create test API keys if they don't exist
             # We'll create them with the expected values from settings
             if not key_manager.validate_key("test_user_api_key"):
@@ -81,7 +81,7 @@ def client():
                 key_manager.keys["test_user_api_key"] = key_manager.keys.pop(user_key.key)
                 key_manager.keys["test_user_api_key"].key = "test_user_api_key"
                 key_manager._save_keys()
-            
+
             if not key_manager.validate_key("test_admin_api_key"):
                 # Create an admin key with the expected value
                 admin_key = key_manager.create_key("admin")
@@ -89,7 +89,7 @@ def client():
                 key_manager.keys["test_admin_api_key"] = key_manager.keys.pop(admin_key.key)
                 key_manager.keys["test_admin_api_key"].key = "test_admin_api_key"
                 key_manager._save_keys()
-            
+
             yield test_client
 
 
@@ -106,8 +106,6 @@ def get_token_safely(client: TestClient, api_key: str, max_retries: int = 3):
                 continue
             pytest.skip("Rate limited after retries")
         else:
-            pytest.fail(
-                f"Token request failed with status {response.status_code}: {response.text}"
-            )
+            pytest.fail(f"Token request failed with status {response.status_code}: {response.text}")
 
     pytest.fail("Failed to obtain token after all retries")

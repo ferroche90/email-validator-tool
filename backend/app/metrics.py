@@ -1,35 +1,26 @@
-from prometheus_client import Counter, Histogram, Gauge
-from prometheus_fastapi_instrumentator import Instrumentator, metrics
-from prometheus_fastapi_instrumentator.metrics import Info
 import time
 from typing import Callable
-from fastapi import Request, Response
 
+from fastapi import Request, Response
+from prometheus_client import Counter, Gauge, Histogram
+from prometheus_fastapi_instrumentator import Instrumentator, metrics
+from prometheus_fastapi_instrumentator.metrics import Info
 
 # Custom metrics
 emails_validated_total = Counter(
-    "emails_validated_total",
-    "Total number of emails validated",
-    ["status", "organization_id"]
+    "emails_validated_total", "Total number of emails validated", ["status", "organization_id"]
 )
 
-smtp_connections_open = Gauge(
-    "smtp_connections_open",
-    "Number of open SMTP connections",
-    ["domain"]
-)
+smtp_connections_open = Gauge("smtp_connections_open", "Number of open SMTP connections", ["domain"])
 
 request_latency_seconds = Histogram(
-    "request_latency_seconds",
-    "Request latency in seconds",
-    ["endpoint", "method", "status_code"]
+    "request_latency_seconds", "Request latency in seconds", ["endpoint", "method", "status_code"]
 )
 
 validation_batch_size = Histogram(
-    "validation_batch_size",
-    "Number of emails in validation batches",
-    ["organization_id"]
+    "validation_batch_size", "Number of emails in validation batches", ["organization_id"]
 )
+
 
 # Custom metric functions
 def emails_validated_counter(info: Info) -> None:
@@ -51,9 +42,7 @@ def request_latency_histogram(info: Info) -> None:
     if info.request and info.response:
         latency = time.time() - info.request.state.start_time
         request_latency_seconds.labels(
-            endpoint=info.request.url.path,
-            method=info.request.method,
-            status_code=info.response.status_code
+            endpoint=info.request.url.path, method=info.request.method, status_code=info.response.status_code
         ).observe(latency)
 
 
@@ -80,16 +69,16 @@ def create_instrumentator() -> Instrumentator:
         excluded_handlers=["/metrics", "/health"],
         env_var_name="ENABLE_METRICS",
     )
-    
+
     # Add custom metrics
     instrumentator.add(emails_validated_counter)
     instrumentator.add(request_latency_histogram)
-    
+
     # Add standard metrics
     instrumentator.add(metrics.request_size())
     instrumentator.add(metrics.response_size())
     instrumentator.add(metrics.latency())
-    
+
     return instrumentator
 
 
@@ -106,4 +95,4 @@ def set_smtp_connections(domain: str, count: int):
 
 def record_batch_size(organization_id: str, batch_size: int):
     """Record validation batch size"""
-    validation_batch_size.labels(organization_id=organization_id).observe(batch_size) 
+    validation_batch_size.labels(organization_id=organization_id).observe(batch_size)
