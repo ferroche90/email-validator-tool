@@ -51,4 +51,6 @@ export const useValidateEmails = () => {
       console.error('Email validation error:', error)
     },
   })
-} 
+}
+
+export { validateEmails }; 

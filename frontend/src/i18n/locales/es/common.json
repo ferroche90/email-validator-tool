@@ -1,0 +1,34 @@
+{
+  "app": {
+    "title": "Validador de Email",
+    "authenticated": "Autenticado con JWT",
+    "authenticating": "Autenticando...",
+    "authError": "Error de Autenticación",
+    "retryAuth": "Reintentar Autenticación"
+  },
+  "ui": {
+    "advanced": "Avanzado",
+    "download": "Descargar",
+    "error": "Error",
+    "loading": "Cargando...",
+    "validate": "Validar",
+    "validating": "Validando..."
+  },
+  "email": {
+    "inputLabel": "Direcciones de Email (una por línea)",
+    "inputPlaceholder": "Ingrese direcciones de email aquí...\nejemplo@dominio.com\ntest@ejemplo.org"
+  },
+  "options": {
+    "enableSmtp": "Habilitar verificación SMTP",
+    "enableCatchAll": "Habilitar detección catch-all"
+  },
+  "results": {
+    "title": "Resultados de Validación",
+    "downloadCsv": "Descargar CSV",
+    "table": {
+      "email": "Email",
+      "status": "Estado",
+      "details": "Detalles"
+    }
+  }
+} 

@@ -19,12 +19,15 @@ dependencies = [
     "loguru>=0.7.3",
     "pydantic>=2.10.0",
     "pydantic-settings>=2.0.0",
+    "email-spell-checker>=0.1.0",
+    "aiodns>=3.1.1",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.4.1",
     "pytest-asyncio>=1.0.0",
+    "pytest-benchmark>=4.0.0",
     "black>=25.1.0",
     "isort>=6.0.1",
     "flake8>=7.2.0",

@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Optional
+from typing import Optional, Any, Dict
 
 from pydantic import BaseModel
 
@@ -13,6 +13,9 @@ class ValidationStatus(Enum):
     INVALID_MX = "invalid_mx"
     DISPOSABLE = "disposable"
     ROLE_ACCOUNT = "role_account"
+    SPAMTRAP = "spamtrap"
+    ABUSE = "abuse"
+    SUPPRESSED = "suppressed"
     ON_BOUNCE_LIST = "on_bounce_list"
     CATCH_ALL = "catch_all"
     INVALID_SMTP = "invalid_smtp"
@@ -25,3 +28,5 @@ class ValidationResult(BaseModel):
     email: str
     status: ValidationStatus
     details: Optional[str] = None
+    suggestion: Optional[str] = None
+    meta: Dict[str, Any] = {}

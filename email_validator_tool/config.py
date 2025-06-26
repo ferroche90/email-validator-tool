@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     # DNS Cache settings
     ENABLE_DNS_CACHE: bool = Field(default=True, description="Enable DNS cache")
     DNS_CACHE_TTL_SECONDS: int = Field(default=3600, description="DNS cache TTL in seconds")
+    CATCH_ALL_CACHE_TTL_SECONDS: int = Field(default=3600, description="Catch-all cache TTL in seconds")
 
     # Validation settings
     ENABLE_SMTP: bool = Field(default=False, description="Enable SMTP validation")

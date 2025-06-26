@@ -1,0 +1,34 @@
+{
+  "app": {
+    "title": "Email Validator",
+    "authenticated": "Authenticated with JWT",
+    "authenticating": "Authenticating...",
+    "authError": "Authentication Error",
+    "retryAuth": "Retry Authentication"
+  },
+  "ui": {
+    "advanced": "Advanced",
+    "download": "Download",
+    "error": "Error",
+    "loading": "Loading...",
+    "validate": "Validate",
+    "validating": "Validating..."
+  },
+  "email": {
+    "inputLabel": "Email Addresses (one per line)",
+    "inputPlaceholder": "Enter email addresses here...\nexample@domain.com\ntest@example.org"
+  },
+  "options": {
+    "enableSmtp": "Enable SMTP verification",
+    "enableCatchAll": "Enable catch-all detection"
+  },
+  "results": {
+    "title": "Validation Results",
+    "downloadCsv": "Download CSV",
+    "table": {
+      "email": "Email",
+      "status": "Status",
+      "details": "Details"
+    }
+  }
+} 

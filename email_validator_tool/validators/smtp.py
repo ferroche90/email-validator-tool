@@ -14,7 +14,7 @@ _last_contact: Dict[str, float] = {}
 
 
 class SMTPValidator:
-    """Validator for checking email deliverability via SMTP"""
+    """Validator for checking email deliverability via SMTP with shared throttling"""
 
     def __init__(self):
         """Initialize the validator"""
