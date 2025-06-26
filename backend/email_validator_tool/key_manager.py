@@ -13,7 +13,6 @@ from typing import Dict, List, Optional
 from cryptography.fernet import Fernet
 from email_validator_tool.utils.paths import get_data_dir
 from loguru import logger
-from tabulate import tabulate
 
 
 class APIKey:

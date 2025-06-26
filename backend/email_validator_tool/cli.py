@@ -192,7 +192,7 @@ def create(role: str = typer.Argument(..., help="Role for the API key (user or a
         # Generate JWT token
         jwt_token = generate_jwt_for_key(api_key.key, api_key.role)
 
-        typer.echo(f"\n✅ API Key created successfully!")
+        typer.echo("\n✅ API Key created successfully!")
         typer.echo(f"Role: {api_key.role}")
         typer.echo(f"API Key: {api_key.key}")
         typer.echo(f"JWT Token: {jwt_token}")
