@@ -94,11 +94,6 @@ jobs:
       run: |
         pip install -e . || (echo "Package installation failed, trying alternative approach" && pip install -e . --no-deps)
 
-    - name: Install backend package in development mode
-      run: |
-        cd backend
-        pip install -e . || (echo "Backend package installation failed, trying alternative approach" && pip install -e . --no-deps)
-
     - name: Install frontend dependencies
       run: |
         cd frontend
@@ -213,11 +208,6 @@ jobs:
     - name: Install main package in development mode
       run: |
         pip install -e . || (echo "Package installation failed, trying alternative approach" && pip install -e . --no-deps)
-
-    - name: Install backend package in development mode
-      run: |
-        cd backend
-        pip install -e . || (echo "Backend package installation failed, trying alternative approach" && pip install -e . --no-deps)
 
     - name: Install frontend dependencies
       run: |
