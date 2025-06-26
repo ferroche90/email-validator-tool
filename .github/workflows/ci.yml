@@ -101,7 +101,7 @@ jobs:
 
     - name: Run main Python tests
       run: |
-        pytest tests/ -v --cov=email_validator_tool --cov-report=xml
+        pytest backend/tests/ -v --cov=email_validator_tool --cov-report=xml
 
     - name: Run backend unit tests
       run: |
