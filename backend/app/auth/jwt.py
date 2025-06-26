@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 
 import jwt
+from jwt import PyJWTError
 from email_validator_tool.config import get_settings
 from fastapi import HTTPException, status
 from loguru import logger
@@ -63,7 +64,7 @@ def verify_token(token: str) -> dict:
             detail="Token has expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except jwt.JWTError:
+    except PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -82,7 +83,7 @@ def decode_token(token: str) -> Dict:
         Decoded token payload
 
     Raises:
-        JWTError: If token is invalid, expired, or malformed
+        PyJWTError: If token is invalid, expired, or malformed
     """
     settings = get_settings()
 
@@ -92,14 +93,14 @@ def decode_token(token: str) -> Dict:
         # Check if token has expired
         exp = payload.get("exp")
         if exp is None:
-            raise jwt.JWTError("Token missing expiration")
+            raise PyJWTError("Token missing expiration")
 
         if datetime.now(timezone.utc) > datetime.fromtimestamp(exp, tz=timezone.utc):
-            raise jwt.JWTError("Token has expired")
+            raise PyJWTError("Token has expired")
 
         logger.debug(f"Successfully decoded JWT token for role: {payload.get('role', 'unknown')}")
         return payload
 
-    except jwt.JWTError as e:
+    except PyJWTError as e:
         logger.warning(f"JWT token validation failed: {str(e)}")
         raise

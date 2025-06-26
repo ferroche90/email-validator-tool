@@ -49,6 +49,8 @@ async def metrics_endpoint(request: Request):
 
     # Get allowlist from environment
     metrics_allowlist = os.getenv("METRICS_ALLOWLIST", "127.0.0.1,::1")
+    if metrics_allowlist is None:
+        metrics_allowlist = "127.0.0.1,::1"
     allowed_ips = [ip.strip() for ip in metrics_allowlist.split(",")]
 
     # Check if client IP is in allowlist
@@ -73,5 +75,5 @@ app.include_router(api_router, prefix="/api")
 
 # Initialize Prometheus instrumentator
 instrumentator = create_instrumentator()
-instrumentator.instrument(app).expose(app, should_gzip=True, name="prometheus_metrics")
+instrumentator.instrument(app).expose(app, name="prometheus_metrics")
 app.state.instrumentator = instrumentator
