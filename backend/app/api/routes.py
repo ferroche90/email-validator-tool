@@ -13,23 +13,14 @@ from app.metrics import increment_emails_validated, record_batch_size
 from email_validator_tool.config import get_settings
 from email_validator_tool.key_manager import create_key_manager
 from email_validator_tool.utils.paths import get_data_dir
-from email_validator_tool.validators.abuse_list import AbuseListValidator
 from email_validator_tool.validators.bounce_list import BounceListValidator
 from email_validator_tool.validators.dns_mx import DNSMXValidator
-from email_validator_tool.validators.spam_trap import SpamTrapValidator
-from email_validator_tool.validators.suppression import SuppressionValidator
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlmodel import Session, select
+from app.limiter import limiter
 
 from ..services.validator_adapter import EmailValidatorService
-
-# Rate limiter setup
-limiter = Limiter(key_func=get_remote_address)
-
-router = APIRouter()
 
 # Global validator instances for sharing across requests
 _settings = get_settings()
@@ -37,10 +28,8 @@ _global_dns_validator = DNSMXValidator(
     cache_ttl_seconds=(_settings.DNS_CACHE_TTL_SECONDS if _settings.ENABLE_DNS_CACHE else 0)
 )
 _global_bounce_validator = BounceListValidator()
-_global_spamtrap_validator = SpamTrapValidator()
-_global_abuse_validator = AbuseListValidator()
-_global_suppression_validator = SuppressionValidator()
 
+router = APIRouter()
 
 class ValidateRequest(BaseModel):
     emails: List[str]
@@ -73,10 +62,6 @@ class SignupResponse(BaseModel):
     user: UserResponse
 
 
-class SuppressionRequest(BaseModel):
-    emails: List[str]
-
-
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
@@ -93,9 +78,6 @@ def get_validator_service() -> EmailValidatorService:
     return EmailValidatorService(
         dns_validator=_global_dns_validator,
         bounce_validator=_global_bounce_validator,
-        spamtrap_validator=_global_spamtrap_validator,
-        abuse_validator=_global_abuse_validator,
-        suppression_validator=_global_suppression_validator,
     )
 
 
@@ -117,6 +99,10 @@ async def signup(request: Request, signup_data: SignupRequest, session: Session 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Organization with this slug already exists"
         )
+
+    # Enforce basic password strength (min 8 chars)
+    if len(signup_data.password) < 8:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Password too short")
 
     # Create organization
     organization = Organization(name=signup_data.organization_name, slug=signup_data.organization_slug)
@@ -257,74 +243,14 @@ async def get_bounce_stats(request: Request, user: dict = Depends(require_role("
     try:
         bounce_count = _global_bounce_validator.get_bounce_count()
         return {
-            "bounce_count": bounce_count,
-            "loaded_in_memory": True,
-            "database_path": str(pathlib.Path(get_data_dir()) / "bounce_list.db"),
+            "bounce_stats": {
+                "bounce_count": bounce_count,
+                "loaded_in_memory": True,
+                "database_path": str(pathlib.Path(get_data_dir()) / "bounce_list.db"),
+            }
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting bounce stats: {str(e)}")
-
-
-@router.post("/admin/reload-spamtraps")
-@limiter.limit("5/minute")
-async def reload_spamtraps(request: Request, user: dict = Depends(require_role("admin"))):
-    """Reload the spam-trap list from disk. Admin access required."""
-    try:
-        count = _global_spamtrap_validator.reload_spamtrap_list()
-        return {
-            "reload_count": count,
-            "message": f"Spam-trap list reloaded successfully. Loaded {count} entries.",
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reloading spamtraps: {str(e)}")
-
-
-@router.post("/admin/suppressions")
-@limiter.limit("5/minute")
-async def add_suppressions(request: Request, body: SuppressionRequest, user: dict = Depends(require_role("admin"))):
-    """Add emails to the suppression list. Admin access required."""
-    try:
-        # Convert to set and normalize emails
-        email_set = {email.strip().lower() for email in body.emails if email.strip()}
-        added_count = _global_suppression_validator.add_suppressions(email_set)
-        total_suppressions = _global_suppression_validator.get_suppression_count()
-        return {
-            "added_count": added_count,
-            "total_suppressions": total_suppressions,
-            "message": f"Added {added_count} new suppressions. Total: {total_suppressions}",
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error adding suppressions: {str(e)}")
-
-
-@router.get("/admin/suppression-stats")
-@limiter.limit("5/minute")
-async def get_suppression_stats(request: Request, user: dict = Depends(require_role("admin"))):
-    """Get suppression list statistics. Admin access required."""
-    try:
-        suppression_count = _global_suppression_validator.get_suppression_count()
-        return {
-            "suppression_count": suppression_count,
-            "loaded_in_memory": True,
-            "database_path": str(pathlib.Path(get_data_dir()) / "suppression_list.db"),
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting suppression stats: {str(e)}")
-
-
-@router.get("/admin/abuse-stats")
-@limiter.limit("5/minute")
-async def get_abuse_stats(request: Request, user: dict = Depends(require_role("admin"))):
-    """Get abuse list statistics. Admin access required."""
-    try:
-        abuse_count = _global_abuse_validator.get_abuse_count()
-        return {
-            "abuse_count": abuse_count,
-            "loaded_in_memory": True,
-            "file_path": str(pathlib.Path(get_data_dir()) / "abuse_list.txt"),
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting abuse stats: {str(e)}")
 
 
 @router.post("/login", response_model=LoginResponse)

@@ -5,8 +5,11 @@ from fastapi.testclient import TestClient
 from backend.tests.conftest import get_token_safely
 
 
-def test_validate_emails(client: TestClient):
+def test_validate_emails(client: TestClient, setup_test_api_keys):
     """Test the /validate endpoint with authentication"""
+    # Get a real JWT token first
+    token = get_token_safely(client, "test_admin_api_key")
+    
     # Test data
     test_data = {
         "emails": ["hello@example.com"],
@@ -14,11 +17,11 @@ def test_validate_emails(client: TestClient):
         "enable_catch_all": False,
     }
 
-    # Make request with Bearer token
+    # Make request with real Bearer token
     response = client.post(
         "/api/validate",
         json=test_data,
-        headers={"Authorization": "Bearer admin_token_here"},
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     # Assert response - accept both 200 (success) and 429 (rate limited)

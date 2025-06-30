@@ -3,7 +3,6 @@ from typing import AsyncGenerator, List, Optional
 
 from email_validator_tool.config import get_settings
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
-from email_validator_tool.validators.abuse_list import AbuseListValidator
 from email_validator_tool.validators.bounce_list import BounceListValidator
 from email_validator_tool.validators.catch_all import CatchAllValidator
 from email_validator_tool.validators.disposable import DisposableValidator
@@ -11,8 +10,6 @@ from email_validator_tool.validators.dns_mx import DNSMXValidator
 from email_validator_tool.validators.provider_type import ProviderTypeValidator
 from email_validator_tool.validators.role_account import RoleAccountValidator
 from email_validator_tool.validators.smtp import SMTPValidator
-from email_validator_tool.validators.spam_trap import SpamTrapValidator
-from email_validator_tool.validators.suppression import SuppressionValidator
 from email_validator_tool.validators.syntax import SyntaxValidator
 from email_validator_tool.validators.typo_suggestion import TypoSuggestionValidator
 from loguru import logger
@@ -25,9 +22,6 @@ class ValidationPipeline:
         self,
         dns_validator: Optional[DNSMXValidator] = None,
         bounce_validator: Optional[BounceListValidator] = None,
-        spamtrap_validator: Optional[SpamTrapValidator] = None,
-        abuse_validator: Optional[AbuseListValidator] = None,
-        suppression_validator: Optional[SuppressionValidator] = None,
         enable_smtp: bool = False,
         enable_catch_all: bool = False,
         max_concurrent_connections: Optional[int] = None,
@@ -38,9 +32,6 @@ class ValidationPipeline:
         Args:
             dns_validator: Optional DNS validator instance. If None, creates new one.
             bounce_validator: Optional bounce list validator instance. If None, creates new one.
-            spamtrap_validator: Optional spam trap validator instance. If None, creates new one.
-            abuse_validator: Optional abuse list validator instance. If None, creates new one.
-            suppression_validator: Optional suppression validator instance. If None, creates new one.
             enable_smtp: Whether to enable SMTP validation
             enable_catch_all: Whether to enable catch-all detection
             max_concurrent_connections: Max concurrent connections for validation
@@ -62,24 +53,6 @@ class ValidationPipeline:
         else:
             self.bounce_validator = bounce_validator
 
-        # Initialize or use provided spamtrap validator
-        if spamtrap_validator is None:
-            self.spamtrap_validator = SpamTrapValidator()
-        else:
-            self.spamtrap_validator = spamtrap_validator
-
-        # Initialize or use provided abuse validator
-        if abuse_validator is None:
-            self.abuse_validator = AbuseListValidator()
-        else:
-            self.abuse_validator = abuse_validator
-
-        # Initialize or use provided suppression validator
-        if suppression_validator is None:
-            self.suppression_validator = SuppressionValidator()
-        else:
-            self.suppression_validator = suppression_validator
-
         # Build validators list
         self.validators = [
             SyntaxValidator(),
@@ -88,9 +61,6 @@ class ValidationPipeline:
             self.dns_validator,
             DisposableValidator(),
             RoleAccountValidator(),
-            self.spamtrap_validator,
-            self.abuse_validator,
-            self.suppression_validator,
             self.bounce_validator,
         ]
 

@@ -175,9 +175,9 @@ class TestJWTValidation:
         )
 
         assert response.status_code == 401
-        # Check for either "expired" or "credentials" in the error message
+
         error_detail = response.json()["detail"].lower()
-        assert "expired" in error_detail or "credentials" in error_detail
+        assert "invalid token" in error_detail
 
     def test_validate_emails_with_invalid_token(self, client):
         """Test email validation with invalid JWT token."""
@@ -192,7 +192,9 @@ class TestJWTValidation:
         )
 
         assert response.status_code == 401
-        assert "credentials" in response.json()["detail"].lower()
+
+        error_detail = response.json()["detail"].lower()
+        assert "invalid token" in error_detail
 
 
 class TestRoleBasedAccess:

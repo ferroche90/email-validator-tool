@@ -49,24 +49,30 @@ def get_current_user(
 def get_current_user_with_key_manager(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     """Get current user from JWT token or, for backward-compatibility, from a raw API key."""
     token = credentials.credentials
-    payload = verify_token(token)
+    
+    # First, try to verify as JWT token
+    try:
+        payload = verify_token(token)
 
-    # 1) Database-user JWTs (contain user_id)
-    if "user_id" in payload:
-        return {
-            "user_id": payload.get("user_id"),
-            "email": payload.get("email"),
-            "role": payload.get("role"),
-            "organization_id": payload.get("organization_id"),
-            "is_database_user": True,
-        }
+        # 1) Database-user JWTs (contain user_id)
+        if "user_id" in payload:
+            return {
+                "user_id": payload.get("user_id"),
+                "email": payload.get("email"),
+                "role": payload.get("role"),
+                "organization_id": payload.get("organization_id"),
+                "is_database_user": True,
+            }
 
-    # 2) API-key derived JWTs (contain role but no user_id)
-    if "role" in payload:
-        return {
-            "role": payload["role"],
-            "is_database_user": False,
-        }
+        # 2) API-key derived JWTs (contain role but no user_id)
+        if "role" in payload:
+            return {
+                "role": payload["role"],
+                "is_database_user": False,
+            }
+    except HTTPException:
+        # JWT verification failed, try as raw API key
+        pass
 
     # 3) Raw API key (legacy – bearer header contains the key itself)
     key_manager = create_key_manager()

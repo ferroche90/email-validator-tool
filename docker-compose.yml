@@ -5,10 +5,51 @@ services:
     build: ./backend
     environment:
       - API_KEY=${API_KEY}
+      - ENABLE_METRICS=true
+      - METRICS_ALLOWLIST=127.0.0.1,::1,172.16.0.0/12,192.168.0.0/16
     volumes:
       - ./backend/bounce_list.db:/app/bounce_list.db
     networks:
       - app-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: email-validator-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/observability/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - app-network
+    depends_on:
+      - api
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: email-validator-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./infra/observability/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./infra/observability/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./infra/observability/grafana-dashboard.json:/etc/grafana/provisioning/dashboards/email-validator-dashboard.json
+      - grafana_data:/var/lib/grafana
+    networks:
+      - app-network
+    depends_on:
+      - prometheus
 
   caddy:
     image: caddy:alpine
@@ -27,6 +68,8 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  prometheus_data:
+  grafana_data:
 
 networks:
   app-network:

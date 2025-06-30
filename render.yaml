@@ -1,4 +1,5 @@
 services:
+  # Backend API Service
   - type: web
     name: email-validator-api
     env: docker
@@ -6,7 +7,7 @@ services:
     branch: main
     plan: free
     region: oregon
-    dockerCommand: ['docker', 'compose', 'up', '-d', '--build']
+    dockerfilePath: ./backend/Dockerfile
     envVars:
       - key: JWT_SECRET_KEY
         generateValue: true
@@ -43,4 +44,21 @@ services:
       - key: ENABLE_METRICS
         value: "true"
     healthCheckPath: /health
+    autoDeploy: true
+
+  # Frontend Static Site
+  - type: web
+    name: email-validator-frontend
+    env: static
+    repo: https://github.com/yourusername/email-validator-tool
+    branch: main
+    plan: free
+    region: oregon
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: ./frontend/dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://email-validator-api.onrender.com
+      - key: VITE_API_KEY
+        value: your-api-key-here
     autoDeploy: true 

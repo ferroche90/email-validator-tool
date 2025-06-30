@@ -12,20 +12,38 @@ from email_validator_tool.core.pipeline import ValidationPipeline
 from email_validator_tool.core.results import ValidationResult
 from fastapi.testclient import TestClient
 from app.api import routes as _routes_module
+from app.api.routes import get_current_user_with_key_manager as _orig_get_user
+from app.auth.base import require_role as _require_role
+import inspect, asyncio
 
 # Set test environment variables to increase rate limits for testing
 os.environ["ENVIRONMENT"] = "test"
 os.environ["JWT_ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
 os.environ["RATE_LIMIT_PER_MINUTE"] = "1000"  # High rate limit for tests
 
-# Disable SlowAPI rate limiting completely during the entire test run
-_global_limiter.enabled = False
-_routes_module.limiter.enabled = False
+# Note: We keep rate limiting enabled so tests that exercise rate limiting behave correctly.
 
 from email_validator_tool.key_manager import create_key_manager
 import sqlite3
-from email_validator_tool.validators.suppression import SUPPRESSION_DB_PATH, setup_suppression_database
 
+try:
+    import pytest_benchmark.plugin  # type: ignore
+    _benchmark_plugin_loaded = True
+except ImportError:
+    _benchmark_plugin_loaded = False
+
+from sqlmodel.orm.session import Session as _SQLSession
+from sqlalchemy import text as _sql_text
+
+# Patch Session.exec once to accept raw SQL strings used in some legacy tests
+_orig_exec = _SQLSession.exec
+
+def _exec_with_text(self, statement, *args, **kwargs):
+    if isinstance(statement, str):
+        statement = _sql_text(statement)
+    return _orig_exec(self, statement, *args, **kwargs)
+
+_SQLSession.exec = _exec_with_text
 
 @pytest.fixture
 def valid_email():
@@ -134,23 +152,19 @@ def setup_test_api_keys():
             key_manager.keys[api_key].key = api_key
             key_manager._save_keys()
 
-    # Also start each test session with an **empty** suppression DB so suppression tests are deterministic
-    setup_suppression_database()
-    try:
-        conn = sqlite3.connect(str(SUPPRESSION_DB_PATH))
-        conn.execute("DELETE FROM suppressions")
-        conn.commit()
-    finally:
-        conn.close()
-
     return key_manager
 
 
-@pytest.fixture
-def benchmark():
-    """Tiny stub replacement for the real pytest-benchmark fixture (not installed in CI)."""
+if not _benchmark_plugin_loaded:
+    @pytest.fixture
+    def benchmark():
+        """Stub benchmark fixture when pytest-benchmark plugin is not available."""
 
-    def _run(func, *args, **kwargs):
-        return func(*args, **kwargs)
+        def _run(func, *args, **kwargs):
+            res = func(*args, **kwargs)
+            if inspect.iscoroutine(res):
+                loop = asyncio.get_event_loop()
+                return loop.run_until_complete(res)
+            return res
 
-    return _run
+        return _run

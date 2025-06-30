@@ -1,0 +1,37 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: 'email-validator-api'
+    
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http'.
+    
+    static_configs:
+      - targets: ['api:8000']
+    
+    metrics_path: '/metrics'
+    
+    # Optional: Add basic auth if needed
+    # basic_auth:
+    #   username: 'admin'
+    #   password: 'password'
+    
+    # Optional: Add TLS config if needed
+    # tls_config:
+    #   ca_file: /path/to/ca.crt
+    #   cert_file: /path/to/cert.crt
+    #   key_file: /path/to/key.key
+    #   server_name: example.com
+    #   insecure_skip_verify: false
+
+  # Optional: Add self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090'] 
