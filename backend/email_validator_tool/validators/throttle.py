@@ -18,7 +18,9 @@ async def enforce_domain_delay(domain: str) -> None:
         elapsed = now - last
         delay = settings.PER_DOMAIN_DELAY_SECONDS - elapsed
         if delay > 0:
-            await asyncio.sleep(delay)
+            # Add a tiny buffer (5ms) to ensure the effective delay meets or exceeds
+            # the configured value even with coarse event-loop scheduling resolution
+            await asyncio.sleep(delay + 0.005)
 
     # record contact time
     _last_contact[domain] = time.time()

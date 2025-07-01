@@ -69,12 +69,14 @@ class CatchAllValidator:
             domain = email.split("@")[1]
             logger.debug(f"Checking catch-all status for domain: {domain}")
 
-            # Check cache first
+            # If we already have a fresh cached result, we still need to obey
+            # the throttling requirement but must avoid a second DNS lookup.
             if self._is_cache_valid(domain):
+                await enforce_domain_delay(domain)
                 logger.debug(f"Using cached catch-all result for domain: {domain}")
                 return self._get_cached_result(domain, email)
 
-            # Global throttle between validators
+            # No valid cache – enforce throttle before performing DNS query.
             await enforce_domain_delay(domain)
 
             # Generate a random, non-existent email address

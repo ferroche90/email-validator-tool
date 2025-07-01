@@ -10,6 +10,7 @@ from app.metrics import (
     set_smtp_connections,
 )
 from fastapi.testclient import TestClient
+from contextlib import contextmanager
 
 
 @pytest.fixture
@@ -23,7 +24,8 @@ class TestMetricsEndpoint:
     def test_metrics_endpoint_allowed_ip(self, client):
         """Test metrics endpoint allows requests from allowed IPs"""
         with patch("app.main.os.getenv", return_value="127.0.0.1,::1"):
-            response = client.get("/metrics")
+            with _mock_client_host("127.0.0.1"):
+                response = client.get("/metrics")
             assert response.status_code == 200
             # Should contain Prometheus metrics
             assert "emails_validated_total" in response.text
@@ -32,8 +34,7 @@ class TestMetricsEndpoint:
         """Test metrics endpoint denies requests from non-allowed IPs"""
         with patch("app.main.os.getenv", return_value="10.0.0.1"):
             # Mock the request client host to be different from allowed
-            with patch("app.main.Request") as mock_request:
-                mock_request.return_value.client.host = "192.168.1.1"
+            with _mock_client_host("192.168.1.1"):
                 response = client.get("/metrics")
                 assert response.status_code == 403
                 assert "Access denied" in response.json()["detail"]
@@ -41,15 +42,15 @@ class TestMetricsEndpoint:
     def test_metrics_endpoint_invalid_ip_in_allowlist(self, client):
         """Test metrics endpoint handles invalid IPs in allowlist gracefully"""
         with patch("app.main.os.getenv", return_value="127.0.0.1,invalid-ip,::1"):
-            response = client.get("/metrics")
+            with _mock_client_host("127.0.0.1"):
+                response = client.get("/metrics")
             assert response.status_code == 200
 
     def test_metrics_endpoint_default_allowlist(self, client):
         """Test metrics endpoint uses default allowlist when env var not set"""
         with patch("app.main.os.getenv", return_value=None):
             # Mock the request client host to be in the default allowlist
-            with patch("app.main.Request") as mock_request:
-                mock_request.return_value.client.host = "127.0.0.1"
+            with _mock_client_host("127.0.0.1"):
                 response = client.get("/metrics")
                 assert response.status_code == 200
 
@@ -114,31 +115,45 @@ class TestMiddleware:
 class TestMetricsIntegration:
     """Test metrics integration with validation endpoint"""
 
-    def test_validation_endpoint_records_metrics(self, client):
+    def test_validation_endpoint_records_metrics(self, client, no_rate_limit):
         """Test that validation endpoint records metrics"""
-        # Mock authentication
-        with patch("app.api.routes.get_current_user_with_key_manager") as mock_auth:
-            mock_auth.return_value = {"organization_id": "test-org-123", "is_database_user": True, "user_id": 1}
 
-            # Mock database session
-            with patch("app.api.routes.get_session") as mock_session:
-                mock_session.return_value = iter([MagicMock()])
+        # Override the auth dependency globally for this request so no real JWT is required
+        from app.main import app as _fastapi_app
+        from app.api.routes import get_current_user_with_key_manager as _get_user
 
-                # Mock user query
-                mock_user = MagicMock()
-                mock_user.organization_id = "test-org-123"
-                mock_session.return_value.__next__().exec.return_value.first.return_value = mock_user
+        _fastapi_app.dependency_overrides = getattr(_fastapi_app, "dependency_overrides", {})  # type: ignore
+        _fastapi_app.dependency_overrides[_get_user] = lambda: {
+            "organization_id": "test-org-123",
+            "is_database_user": True,
+            "user_id": 1,
+            "role": "admin",
+        }
 
+        try:
+            # Prepare a mock session object that returns a mocked user
+            mock_session_obj = MagicMock()
+            mock_user = MagicMock()
+            mock_user.organization_id = "test-org-123"
+            # Configure the chain: session.exec(...).first() -> mock_user
+            mock_session_obj.exec.return_value.first.return_value = mock_user
+
+            # Patch get_session to yield this mock session without consuming the iterator
+            def _get_session_override():
+                yield mock_session_obj
+
+            with patch("app.api.routes.get_session", _get_session_override):
                 # Mock validator service
                 with patch("app.api.routes.EmailValidatorService") as mock_validator:
+                    from unittest.mock import AsyncMock
                     mock_service = MagicMock()
-                    mock_service.validate_many.return_value = [
-                        MagicMock(status="valid"),
-                        MagicMock(status="invalid"),
-                    ]
+                    mock_service.validate_many = AsyncMock(return_value=[
+                        {"status": "valid", "email": "test@example.com", "is_valid": True},
+                        {"status": "invalid", "email": "invalid@example.com", "is_valid": False},
+                    ])
                     mock_validator.return_value = mock_service
 
-                    # Make request
+                    # Make request (auth header no longer needed due to override)
                     response = client.post(
                         "/api/validate",
                         json={
@@ -149,8 +164,9 @@ class TestMetricsIntegration:
                     )
 
                     assert response.status_code == 200
-                    # The metrics should have been recorded (we can't easily test this without
-                    # accessing the actual Prometheus registry, but the code should execute)
+        finally:
+            # Clear the override so it does not affect other tests
+            _fastapi_app.dependency_overrides.pop(_get_user, None)
 
 
 class TestMetricsEnvironment:
@@ -166,3 +182,33 @@ class TestMetricsEnvironment:
         # Check that the instrumentator is attached to the app
         assert hasattr(app.state, "instrumentator")
         assert app.state.instrumentator is not None
+
+
+# Helper context manager to spoof the client host of incoming requests by monkeypatching
+# FastAPI's Request object used by the application. Starlette creates a concrete
+# `Request` instance and passes it through, so we monkey-patch the attribute the
+# app inspects (`request.client.host`).
+
+
+@contextmanager
+def _mock_client_host(host: str):
+    """Temporarily monkey-patch `app.main.Request` so `request.client.host` returns `host`."""
+    import app.main as _main
+
+    original_request_class = _main.Request
+
+    class _PatchedRequest(original_request_class):  # type: ignore
+        @property
+        def client(self):  # type: ignore
+            # Return an object with the desired host attribute
+            class _Client:
+                def __init__(self, _host):
+                    self.host = _host
+
+            return _Client(host)
+
+    _main.Request = _PatchedRequest  # type: ignore
+    try:
+        yield
+    finally:
+        _main.Request = original_request_class

@@ -1,10 +1,14 @@
 """
 Common test fixtures for email validator tests.
+
+This file also contains several global tweaks to make the whole test-suite
+work smoothly when running inside `pytest-asyncio` and with FastAPI.
 """
 
 import os
 import time
 from unittest.mock import patch
+from contextlib import contextmanager
 
 import pytest
 from app.main import app, limiter as _global_limiter
@@ -15,11 +19,12 @@ from app.api import routes as _routes_module
 from app.api.routes import get_current_user_with_key_manager as _orig_get_user
 from app.auth.base import require_role as _require_role
 import inspect, asyncio
+import asyncio as _asyncio
 
 # Set test environment variables to increase rate limits for testing
 os.environ["ENVIRONMENT"] = "test"
 os.environ["JWT_ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
-os.environ["RATE_LIMIT_PER_MINUTE"] = "1000"  # High rate limit for tests
+os.environ["RATE_LIMIT_PER_MINUTE"] = "10000"  # Very high rate limit for tests
 
 # Note: We keep rate limiting enabled so tests that exercise rate limiting behave correctly.
 
@@ -44,6 +49,74 @@ def _exec_with_text(self, statement, *args, **kwargs):
     return _orig_exec(self, statement, *args, **kwargs)
 
 _SQLSession.exec = _exec_with_text
+
+# Store original rate limit functions
+_original_rate_limit_functions = {}
+
+@contextmanager
+def disable_rate_limiting():
+    """Context manager to temporarily disable rate limiting for tests."""
+    # Store originals so we can restore later
+    original_limit = _global_limiter.limit
+    original_enabled_state = getattr(_global_limiter, "enabled", None)
+
+    try:
+        # Replace with a no-op decorator so any **newly declared** routes inside tests are unaffected
+        def no_limit(*args, **kwargs):
+            def decorator(func):
+                return func
+            return decorator
+
+        _global_limiter.limit = no_limit
+
+        # Completely disable the limiter for **already decorated** routes by flipping the
+        # internal `enabled` flag if it exists (SlowAPI exposes this attribute).
+        if original_enabled_state is not None:
+            _global_limiter.enabled = False
+        yield
+    finally:
+        # Restore original method
+        _global_limiter.limit = original_limit
+        if original_enabled_state is not None:
+            _global_limiter.enabled = original_enabled_state
+
+@contextmanager
+def reset_rate_limit_counters():
+    """Context manager to reset rate limit counters between tests."""
+    try:
+        # Clear the rate limit storage
+        if hasattr(_global_limiter, 'storage'):
+            _global_limiter.storage.clear()
+        yield
+    except Exception:
+        # If clearing fails, just continue
+        yield
+
+@pytest.fixture
+def no_rate_limit():
+    """Fixture to disable rate limiting for a test."""
+    with disable_rate_limiting():
+        yield
+
+@pytest.fixture
+def reset_limits():
+    """Fixture to reset rate limit counters before a test."""
+    with reset_rate_limit_counters():
+        yield
+
+@pytest.fixture
+def high_rate_limit():
+    """Fixture to set very high rate limits for a test."""
+    # Store original environment
+    original_limit = os.environ.get("RATE_LIMIT_PER_MINUTE", "1000")
+    
+    try:
+        # Set very high limits
+        os.environ["RATE_LIMIT_PER_MINUTE"] = "100000"
+        yield
+    finally:
+        # Restore original
+        os.environ["RATE_LIMIT_PER_MINUTE"] = original_limit
 
 @pytest.fixture
 def valid_email():
@@ -168,3 +241,60 @@ if not _benchmark_plugin_loaded:
             return res
 
         return _run
+
+_original_asyncio_run = _asyncio.run
+
+def _safe_asyncio_run(main, *args, **kwargs):  # type: ignore
+    """A drop-in replacement for `asyncio.run` that works inside an active loop.
+
+    Some unit-tests call `asyncio.run()` even though they are already running
+    inside a pytest-managed event-loop (e.g. tests marked with
+    ``@pytest.mark.asyncio``).  The vanilla implementation raises
+    `RuntimeError` in this scenario.  We detect the nested call and instead use
+    ``loop.run_until_complete`` so the test continues to work.
+    """
+
+    running_loop = _asyncio.get_running_loop()
+
+    # Prepare the coroutine to execute
+    if _asyncio.iscoroutine(main):
+        coro = main
+    else:
+        coro = main(*args, **kwargs)
+
+    import threading
+    
+    result_holder = {}
+    exc_holder = {}
+
+    def _thread_runner():
+        try:
+            result_holder["value"] = _original_asyncio_run(coro)
+        except Exception as e:  # pragma: no cover
+            exc_holder["err"] = e
+
+    t = threading.Thread(target=_thread_runner)
+    t.start()
+    t.join()
+
+    if "err" in exc_holder:
+        raise exc_holder["err"]
+
+    return result_holder.get("value")
+
+# Apply monkey-patch once when tests are imported
+_asyncio.run = _safe_asyncio_run
+
+# ---------------------------------------------------------------------------
+#  Global autouse fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _clear_domain_throttle_state():
+    """Reset per-domain throttle storage before each test for isolation."""
+    from email_validator_tool.validators import throttle as _throttle
+
+    _throttle._last_contact.clear()
+    yield
+    _throttle._last_contact.clear()

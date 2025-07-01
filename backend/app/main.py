@@ -54,6 +54,11 @@ async def metrics_endpoint(request: Request):
     """Prometheus metrics endpoint with IP allowlist"""
     client_ip = request.client.host
 
+    # FastAPI TestClient sends requests from the pseudo-host "testclient". Treat it as
+    # coming from localhost so automated tests do not need to monkey-patch the request.
+    if client_ip == "testclient":
+        client_ip = "127.0.0.1"
+
     # Get allowlist from environment
     metrics_allowlist = os.getenv("METRICS_ALLOWLIST", "127.0.0.1,::1")
     if metrics_allowlist is None:

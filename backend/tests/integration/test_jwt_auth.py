@@ -73,7 +73,7 @@ def get_token_safely(client, api_key, max_retries=3):
 class TestTokenEndpoint:
     """Test the /api/token endpoint."""
 
-    def test_create_token_with_valid_user_api_key(self, client, settings, setup_test_api_keys):
+    def test_create_token_with_valid_user_api_key(self, client, settings, setup_test_api_keys, reset_limits):
         """Test creating a JWT token with valid user API key."""
         response = client.post("/api/token", json={"api_key": "test_user_api_key"})
 
@@ -89,7 +89,7 @@ class TestTokenEndpoint:
         assert payload["role"] == "user"
         assert payload["sub"] == "user_user"
 
-    def test_create_token_with_valid_admin_api_key(self, client, settings, setup_test_api_keys):
+    def test_create_token_with_valid_admin_api_key(self, client, settings, setup_test_api_keys, reset_limits):
         """Test creating a JWT token with valid admin API key."""
         response = client.post("/api/token", json={"api_key": "test_admin_api_key"})
 
@@ -134,7 +134,7 @@ class TestTokenEndpoint:
 class TestJWTValidation:
     """Test JWT token validation."""
 
-    def test_validate_emails_with_jwt_token(self, client, settings, setup_test_api_keys):
+    def test_validate_emails_with_jwt_token(self, client, settings, setup_test_api_keys, reset_limits):
         """Test email validation with JWT token."""
         # First, get a JWT token
         token = get_token_safely(client, "test_user_api_key")
@@ -200,7 +200,7 @@ class TestJWTValidation:
 class TestRoleBasedAccess:
     """Test role-based access control."""
 
-    def test_admin_endpoint_with_user_role(self, client, settings, setup_test_api_keys):
+    def test_admin_endpoint_with_user_role(self, client, settings, setup_test_api_keys, reset_limits):
         """Test admin endpoint with user role JWT token."""
         # Get a user JWT token
         token = get_token_safely(client, "test_user_api_key")
@@ -209,9 +209,10 @@ class TestRoleBasedAccess:
         response = client.get("/api/cache-stats", headers={"Authorization": f"Bearer {token}"})
 
         assert response.status_code == 403
-        assert "Access denied" in response.json()["detail"]
+        detail = response.json()["detail"].lower()
+        assert "role" in detail and "admin" in detail and "required" in detail
 
-    def test_admin_endpoint_with_admin_role(self, client, settings, setup_test_api_keys):
+    def test_admin_endpoint_with_admin_role(self, client, settings, setup_test_api_keys, reset_limits):
         """Test admin endpoint with admin role JWT token."""
         # Get an admin JWT token
         token = get_token_safely(client, "test_admin_api_key")
@@ -223,7 +224,7 @@ class TestRoleBasedAccess:
         data = response.json()
         assert "cache_stats" in data
 
-    def test_user_endpoint_with_admin_role(self, client, settings, setup_test_api_keys):
+    def test_user_endpoint_with_admin_role(self, client, settings, setup_test_api_keys, reset_limits):
         """Test user endpoint with admin role JWT token."""
         # Get an admin JWT token
         token = get_token_safely(client, "test_admin_api_key")
@@ -245,7 +246,7 @@ class TestRoleBasedAccess:
 class TestTokenExpiration:
     """Test token expiration handling."""
 
-    def test_token_expiration_time(self, client, settings, setup_test_api_keys):
+    def test_token_expiration_time(self, client, settings, setup_test_api_keys, reset_limits):
         """Test that JWT tokens have the correct expiration time."""
         # Get a token
         token = get_token_safely(client, "test_user_api_key")

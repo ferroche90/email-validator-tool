@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from backend.tests.conftest import get_token_safely
 
 
-def test_validate_emails(client: TestClient, setup_test_api_keys):
+def test_validate_emails(client: TestClient, setup_test_api_keys, reset_limits, no_rate_limit):
     """Test the /validate endpoint with authentication"""
     # Get a real JWT token first
     token = get_token_safely(client, "test_admin_api_key")
@@ -24,29 +24,24 @@ def test_validate_emails(client: TestClient, setup_test_api_keys):
         headers={"Authorization": f"Bearer {token}"},
     )
 
-    # Assert response - accept both 200 (success) and 429 (rate limited)
-    assert response.status_code in [200, 429]
+    # Should succeed
+    assert response.status_code == 200
+    response_data = response.json()
+    assert "results" in response_data
 
-    if response.status_code == 200:
-        response_data = response.json()
-        assert "results" in response_data
-
-        # Check that results contain validation status
-        results = response_data["results"]
-        assert len(results) == 1
-        assert "status" in results[0]
-        assert "email" in results[0]
-    else:
-        # Rate limited - this is acceptable in test environment
-        assert response.status_code == 429
+    # Check that results contain validation status
+    results = response_data["results"]
+    assert len(results) == 1
+    assert "status" in results[0]
+    assert "email" in results[0]
 
 
-def test_validate_emails_endpoint(client, setup_test_api_keys):
+def test_validate_emails_endpoint(client, setup_test_api_keys, reset_limits, no_rate_limit):
     """Test the /api/validate endpoint."""
     # Get a JWT token first
     token = get_token_safely(client, "test_admin_api_key")
 
-    client.post(
+    response = client.post(
         "/api/validate",
         json={
             "emails": ["test@example.com", "invalid-email", "another@example.com"],
@@ -55,3 +50,9 @@ def test_validate_emails_endpoint(client, setup_test_api_keys):
         },
         headers={"Authorization": f"Bearer {token}"},
     )
+    
+    # Should succeed
+    assert response.status_code == 200
+    data = response.json()
+    assert "results" in data
+    assert len(data["results"]) == 3

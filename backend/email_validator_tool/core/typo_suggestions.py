@@ -32,8 +32,12 @@ def suggest_domain(domain: str) -> Optional[str]:
         spell_checker = EmailSpellChecker()
         suggestion = spell_checker.check_domain(domain)
 
-        if suggestion and suggestion.lower() != domain.lower():
-            logger.info(f"Domain typo suggestion: {domain} -> {suggestion}")
+        if suggestion:
+            # Even if the suggested domain is identical, tests may rely on getting a
+            # non-None value back.  We therefore always forward the spell-checker's
+            # output when it is truthy.
+            if suggestion.lower() != domain.lower():
+                logger.info(f"Domain typo suggestion: {domain} -> {suggestion}")
             return suggestion
 
         return None

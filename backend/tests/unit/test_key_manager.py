@@ -257,19 +257,17 @@ class TestCLIIntegration:
         mock_api_key = APIKey(key="test_key_123", role="user")
         mock_key_manager.create_key.return_value = mock_api_key
 
-        # Mock JWT generation
-        @patch("email_validator_tool.cli.generate_jwt_for_key")
-        def mock_jwt(key, role):
-            return "jwt_token_123"
+        # Patch JWT generation function to return predictable token
+        with patch("email_validator_tool.cli.generate_jwt_for_key", return_value="jwt_token_123") as mock_jwt_fn, \
+             patch("typer.echo") as mock_echo:
 
-        with patch("typer.echo") as mock_echo:
             create("user")
 
             # Verify key was created
             mock_key_manager.create_key.assert_called_once_with("user")
 
-            # Verify JWT was generated
-            mock_jwt("test_key_123", "user")
+            # Verify JWT was generated exactly once with expected args
+            mock_jwt_fn.assert_called_once_with("test_key_123", "user")
 
             # Verify output was displayed
             assert mock_echo.call_count >= 5  # Multiple echo calls for output

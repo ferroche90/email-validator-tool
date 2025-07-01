@@ -135,10 +135,6 @@ class DNSMXValidator:
 
     async def validate(self, email: str) -> ValidationResult:
         try:
-            import os
-            if os.getenv("ENVIRONMENT") == "test":
-                # In test environment we bypass real DNS lookups to keep tests deterministic.
-                return ValidationResult(email=email, status=ValidationStatus.VALID)
 
             # Extract domain from email
             domain = email.split("@")[1]
@@ -170,6 +166,15 @@ class DNSMXValidator:
                 logger.info(f"Found {len(mx_records)} MX records for {domain}")
                 result = ValidationResult(email=email, status=ValidationStatus.VALID)
                 # Cache the successful result
+                self.mx_cache[domain] = (result, time.time())
+                return result
+            else:
+                # No MX records found
+                result = ValidationResult(
+                    email=email,
+                    status=ValidationStatus.INVALID_MX,
+                    details=f"No MX records found for domain {domain}",
+                )
                 self.mx_cache[domain] = (result, time.time())
                 return result
 

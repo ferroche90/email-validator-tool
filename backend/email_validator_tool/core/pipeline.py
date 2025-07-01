@@ -11,7 +11,6 @@ from email_validator_tool.validators.provider_type import ProviderTypeValidator
 from email_validator_tool.validators.role_account import RoleAccountValidator
 from email_validator_tool.validators.smtp import SMTPValidator
 from email_validator_tool.validators.syntax import SyntaxValidator
-from email_validator_tool.validators.typo_suggestion import TypoSuggestionValidator
 from loguru import logger
 
 
@@ -56,7 +55,6 @@ class ValidationPipeline:
         # Build validators list
         self.validators = [
             SyntaxValidator(),
-            TypoSuggestionValidator(),
             ProviderTypeValidator(),
             self.dns_validator,
             DisposableValidator(),
