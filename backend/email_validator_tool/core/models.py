@@ -19,6 +19,7 @@ class ValidationStatus(Enum):
     ON_BOUNCE_LIST = "on_bounce_list"
     CATCH_ALL = "catch_all"
     INVALID_SMTP = "invalid_smtp"
+    TEMPORARY_ERROR = "temporary_error"
     UNKNOWN_ERROR = "unknown_error"
 
 

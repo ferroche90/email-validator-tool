@@ -30,5 +30,15 @@
       "status": "Estado",
       "details": "Detalles"
     }
+  },
+  "hero": {
+    "title": "Valida correos al instante",
+    "subtitle": "Pega direcciones de correo en el cuadro o sube un archivo CSV para validarlas."
+  },
+  "fileUpload": {
+    "title": "Subir lista de correos",
+    "selectFile": "Seleccionar archivo",
+    "download": "Descargar resultados",
+    "fileLoaded": "{{count}} correos cargados del archivo"
   }
 } 

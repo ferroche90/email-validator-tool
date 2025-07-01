@@ -93,7 +93,7 @@ class CatchAllValidator:
                     )
                     self._cache_result(domain, result)
                     return result
-                mx_server = str(mx_records[0].exchange)
+                mx_server = str(mx_records[0].exchange).rstrip(".")
             except dns.resolver.NXDOMAIN:
                 result = ValidationResult(
                     email=email,
@@ -141,18 +141,26 @@ class CatchAllValidator:
                         self._cache_result(domain, result)
                         return result
 
-            except (aiosmtplib.SMTPConnectError, asyncio.TimeoutError):
-                logger.warning(f"Connection failed to {mx_server} for catch-all check.")
-                result = ValidationResult(
-                    email=email,
-                    status=ValidationStatus.UNKNOWN_ERROR,
-                    details=f"SMTP connection to {mx_server} failed.",
-                )
-                self._cache_result(domain, result)
-                return result
             except Exception as e:
-                logger.error(f"Error during catch-all SMTP check for {domain}: {e}")
-                result = ValidationResult(email=email, status=ValidationStatus.UNKNOWN_ERROR, details=str(e))
+                # aiosmtplib may raise SMTPException with a tuple like (550, '5.1.1 ...', 'recipient')
+                smtp_code = None
+                try:
+                    smtp_code = int(str(e).lstrip("( ").split(",")[0])
+                except Exception:
+                    pass
+
+                if smtp_code is not None and 500 <= smtp_code < 600:
+                    # Permanent rejection of fake address → domain is NOT catch-all → treat as VALID
+                    logger.debug(f"Domain '{domain}' rejected fake email with {smtp_code}, not a catch-all.")
+                    result = ValidationResult(email=email, status=ValidationStatus.VALID)
+                else:
+                    logger.error(f"Error during catch-all SMTP check for {domain}: {e}")
+                    result = ValidationResult(
+                        email=email,
+                        status=ValidationStatus.UNKNOWN_ERROR,
+                        details=str(e),
+                    )
+
                 self._cache_result(domain, result)
                 return result
 

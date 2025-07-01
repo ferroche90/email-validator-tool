@@ -30,5 +30,15 @@
       "status": "Status",
       "details": "Details"
     }
+  },
+  "hero": {
+    "title": "Validate Email Addresses Instantly",
+    "subtitle": "Paste email addresses in the box or upload a CSV file to validate them."
+  },
+  "fileUpload": {
+    "title": "Upload Email List",
+    "selectFile": "Select File",
+    "download": "Download Results",
+    "fileLoaded": "{{count}} emails loaded from file"
   }
 } 

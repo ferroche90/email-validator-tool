@@ -1,3 +1,5 @@
+import re
+
 import aiosmtplib
 import dns.resolver
 from email_validator_tool.config import get_settings
@@ -56,7 +58,8 @@ class SMTPValidator:
                 )
 
             # Get the highest priority MX server
-            mx_host = str(mx_records[0].exchange)
+            # Remove trailing dot from FQDN to match certificate common names
+            mx_host = str(mx_records[0].exchange).rstrip(".")
             logger.debug(f"Checking {email} via MX {mx_host}")
 
             try:
@@ -73,24 +76,39 @@ class SMTPValidator:
                     # RCPT TO
                     response = await smtp.rcpt(email)
 
-                    if response.code == 250:
+                    code = int(response.code)
+
+                    # 2xx: Accepted
+                    if 200 <= code < 300:
                         return ValidationResult(
                             email=email,
                             status=ValidationStatus.VALID,
                             details=f"SMTP verification successful via {mx_host}",
                         )
-                    elif response.code == 550:
+
+                    # 4xx: Temporary (greylisting, mailbox unavailable etc.)
+                    if 400 <= code < 500:
+                        return ValidationResult(
+                            email=email,
+                            status=ValidationStatus.TEMPORARY_ERROR,
+                            details=f"Temporary SMTP error {code}: {_simplify_smtp_message(response.message)}",
+                        )
+
+                    # 5xx: Permanent failure – mailbox does not exist or other permanent issue
+                    if 500 <= code < 600:
+                        friendly = "Mailbox does not exist" if code == 550 else _simplify_smtp_message(response.message)
                         return ValidationResult(
                             email=email,
                             status=ValidationStatus.INVALID_SMTP,
-                            details=f"Mailbox does not exist (response from {mx_host})",
+                            details=f"Permanent SMTP error {code}: {friendly}",
                         )
-                    else:
-                        return ValidationResult(
-                            email=email,
-                            status=ValidationStatus.UNKNOWN_ERROR,
-                            details=f"Unexpected SMTP response code {response.code} from {mx_host}",
-                        )
+
+                    # Fallback
+                    return ValidationResult(
+                        email=email,
+                        status=ValidationStatus.UNKNOWN_ERROR,
+                        details=f"Unexpected SMTP response code {code} from {mx_host}",
+                    )
 
             except aiosmtplib.SMTPConnectError as e:
                 logger.error(f"SMTP connection error for {email}: {str(e)}")
@@ -107,11 +125,41 @@ class SMTPValidator:
                     details=f"SMTP timeout: {str(e)}",
                 )
             except aiosmtplib.SMTPException as e:
+                # Attempt to extract an SMTP code from the exception text to classify the error
                 logger.error(f"SMTP error for {email}: {str(e)}")
+
+                code = None
+                try:
+                    # str(e) might look like "(550, '5.1.1 ...', 'recipient')" – extract leading int
+                    code = int(str(e).lstrip("( ").split(",")[0])
+                except Exception:
+                    pass
+
+                if code is not None:
+                    if 400 <= code < 500:
+                        status = ValidationStatus.TEMPORARY_ERROR
+                    elif 500 <= code < 600:
+                        status = ValidationStatus.INVALID_SMTP
+                    else:
+                        status = ValidationStatus.UNKNOWN_ERROR
+                else:
+                    status = ValidationStatus.UNKNOWN_ERROR
+
+                # Extract the human-readable part between single quotes if present
+                human_msg_match = re.search(r"'([^']+)'", str(e))
+                human_msg = human_msg_match.group(1) if human_msg_match else str(e)
+
+                if code == 550:
+                    simplified_msg = "SMTP error 550: Mailbox does not exist"
+                else:
+                    simplified_msg = _simplify_smtp_message(human_msg)
+                    if code is not None:
+                        simplified_msg = f"SMTP error {code}: {simplified_msg}"
+
                 return ValidationResult(
                     email=email,
-                    status=ValidationStatus.UNKNOWN_ERROR,
-                    details=f"SMTP error: {str(e)}",
+                    status=status,
+                    details=simplified_msg,
                 )
 
         except Exception as e:
@@ -121,3 +169,35 @@ class SMTPValidator:
                 status=ValidationStatus.UNKNOWN_ERROR,
                 details=f"Error: {str(e)}",
             )
+
+
+def _simplify_smtp_message(raw_msg):
+    """Return a compact single-line description suitable for end-users."""
+    if raw_msg is None:
+        return ""
+
+    if isinstance(raw_msg, (bytes, bytearray)):
+        try:
+            raw_msg = raw_msg.decode()
+        except Exception:
+            raw_msg = str(raw_msg)
+
+    # Normalize whitespace
+    message = " ".join(str(raw_msg).split())
+
+    # Lower-cased copy for pattern matching
+    lower_msg = message.lower()
+
+    # Friendly mappings for well-known phrases
+    if "greylist" in lower_msg:
+        return "Greylisted – try again later"
+    if "does not exist" in lower_msg or "no such user" in lower_msg or "user unknown" in lower_msg:
+        return "Mailbox does not exist"
+    if "quota" in lower_msg and ("exceed" in lower_msg or "exceeded" in lower_msg or "full" in lower_msg):
+        return "Mailbox full / quota exceeded"
+
+    # Fallback: truncate overly long technical message
+    if len(message) > 120:
+        message = message[:117] + "..."
+
+    return message

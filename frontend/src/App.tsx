@@ -1,21 +1,35 @@
 import './App.css'
 import { EmailChecker } from './components/EmailChecker'
-import LanguageSwitcher from './components/LanguageSwitcher'
 import CsvUploader from './components/CsvUploader'
+import { createTheme, ThemeProvider } from '@mui/material/styles'
+import CssBaseline from '@mui/material/CssBaseline'
+import Container from '@mui/material/Container'
+import Box from '@mui/material/Box'
+import Header from './components/Header'
+import Typography from '@mui/material/Typography'
+import { useTranslation } from 'react-i18next'
 
 function App() {
+  const theme = createTheme();
+  const { t } = useTranslation(['common']);
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto py-8">
-        <div className="flex justify-end mb-4">
-          <LanguageSwitcher />
-        </div>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Header />
+      <Container maxWidth="md" sx={{ py: 6 }}>
+        {/* Hero / SEO friendly intro */}
+        <Box textAlign="center" mb={6}>
+          <Typography variant="h3" fontWeight="bold" gutterBottom>
+            {t('hero.title')}
+          </Typography>
+          <Typography variant="subtitle1" color="text.secondary">
+            {t('hero.subtitle')}
+          </Typography>
+        </Box>
+
         <EmailChecker />
-        <div className="mt-8">
-          <CsvUploader />
-        </div>
-      </div>
-    </div>
+      </Container>
+    </ThemeProvider>
   )
 }
 

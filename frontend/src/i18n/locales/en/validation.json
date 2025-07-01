@@ -5,6 +5,7 @@
     "invalid_domain": "Invalid Domain",
     "invalid_mx": "Invalid MX",
     "invalid_smtp": "Invalid SMTP",
+    "temporary_error": "Temporary SMTP Error",
     "disposable": "Disposable",
     "role_account": "Role Account",
     "spamtrap": "Spam Trap",

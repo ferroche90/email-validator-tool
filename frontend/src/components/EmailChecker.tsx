@@ -1,10 +1,30 @@
 import { useState } from 'react'
-import { ArrowPathIcon, Cog6ToothIcon, DocumentArrowDownIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { Cog6ToothIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline'
 import { useTranslation } from 'react-i18next'
 import { useValidateEmails } from '../lib/useValidateEmails'
 import { useAuth } from '../lib/useAuth'
-import clsx from 'clsx'
 import type { ValidationResult, ValidateResponse } from '../types'
+import Box from '@mui/material/Box'
+import Stack from '@mui/material/Stack'
+import Typography from '@mui/material/Typography'
+import Button from '@mui/material/Button'
+import TextField from '@mui/material/TextField'
+import Alert from '@mui/material/Alert'
+import CircularProgress from '@mui/material/CircularProgress'
+import Collapse from '@mui/material/Collapse'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Checkbox from '@mui/material/Checkbox'
+import Paper from '@mui/material/Paper'
+import TableContainer from '@mui/material/TableContainer'
+import Table from '@mui/material/Table'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
+import TableCell from '@mui/material/TableCell'
+import TableBody from '@mui/material/TableBody'
+import Chip from '@mui/material/Chip'
+import LinearProgress from '@mui/material/LinearProgress'
+import CsvUploader from './CsvUploader'
+import TablePagination from '@mui/material/TablePagination'
 
 export const EmailChecker = () => {
   const { t } = useTranslation(['common', 'validation'])
@@ -12,6 +32,9 @@ export const EmailChecker = () => {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [enableSmtp, setEnableSmtp] = useState(false)
   const [enableCatchAll, setEnableCatchAll] = useState(false)
+  const [csvEmails, setCsvEmails] = useState<string[]>([])
+  const [page, setPage] = useState(0)
+  const rowsPerPage = 12
   
   const { isAuthenticated, isLoading: authLoading, error: authError, refreshToken } = useAuth()
   const { mutate, isPending, error, data } = useValidateEmails()
@@ -19,10 +42,12 @@ export const EmailChecker = () => {
   const typedError = error as Error | null
 
   const handleValidate = () => {
-    const emailList = emails
+    setPage(0)
+    const emailList = [...emails
       .split('\n')
       .map(email => email.trim())
-      .filter(email => email.length > 0)
+      .filter(email => email.length > 0),
+      ...csvEmails]
     
     if (emailList.length === 0) return
 
@@ -33,9 +58,12 @@ export const EmailChecker = () => {
     })
   }
 
+  const handleCsvEmailsLoaded = (emails: string[]) => {
+    setCsvEmails(emails)
+  }
+
   const handleDownloadCSV = () => {
     if (!validationData?.results) return
-
     const csvContent = [
       'Email,Status,Details',
       ...validationData.results.map((result: ValidationResult) => 
@@ -54,203 +82,167 @@ export const EmailChecker = () => {
     document.body.removeChild(link)
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'valid':
-        return 'bg-green-100 text-green-800 border-green-200'
-      case 'invalid_syntax':
-      case 'invalid_domain':
-      case 'invalid_mx':
-      case 'invalid_smtp':
-      case 'disposable':
-      case 'role_account':
-      case 'spamtrap':
-      case 'abuse':
-      case 'suppressed':
-      case 'on_bounce_list':
-      case 'catch_all':
-        return 'bg-red-100 text-red-800 border-red-200'
-      case 'unknown_error':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200'
-    }
+  const handleChangePage = (_: unknown, newPage: number) => {
+    setPage(newPage)
   }
 
   // Show loading state while authenticating
   if (authLoading) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-white rounded-lg shadow-md p-6 text-center">
-          <ArrowPathIcon className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p className="text-gray-600">{t('common:app.authenticating')}</p>
-        </div>
-      </div>
+      <Stack sx={{ minHeight: '60vh' }} alignItems="center" justifyContent="center">
+        <CircularProgress />
+        <Typography sx={{ mt: 2 }}>{t('common:app.authenticating')}</Typography>
+      </Stack>
     )
   }
 
   // Show authentication error
   if (authError) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg shadow-md p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <ExclamationTriangleIcon className="w-6 h-6 text-red-600" />
-            <h2 className="text-xl font-semibold text-red-800">{t('common:app.authError')}</h2>
-          </div>
-          <p className="text-red-700 mb-4">{authError}</p>
-          <button
-            onClick={refreshToken}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-          >
-            {t('common:app.retryAuth')}
-          </button>
-        </div>
-      </div>
+      <Stack sx={{ maxWidth: 600, mx: 'auto', p: 4 }} spacing={2}>
+        <Alert severity="error" variant="outlined">
+          {t('common:app.authError')}: {authError}
+        </Alert>
+        <Button variant="contained" color="error" onClick={refreshToken}>
+          {t('common:app.retryAuth')}
+        </Button>
+      </Stack>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      {/* Authentication Status */}
-      {isAuthenticated && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-            <span className="text-green-800 font-medium">{t('common:app.authenticated')}</span>
-          </div>
-        </div>
-      )}
+    <Stack spacing={4} sx={{ maxWidth: 900, mx: 'auto', p: 3 }}>
+      {/* Optionally show auth status; hidden per feedback */}
 
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-2xl font-bold mb-4">{t('common:app.title')}</h2>
+      <Paper elevation={3} sx={{ p: 4 }}>
+        <Typography variant="h5" fontWeight="bold" mb={3}>
+          {t('common:app.title')}
+        </Typography>
         
         {/* Email Input */}
-        <div className="mb-4">
-          <label htmlFor="email-input" className="block text-sm font-medium text-gray-700 mb-2">
-            {t('common:email.inputLabel')}
-          </label>
-          <textarea
-            id="email-input"
+        <Stack spacing={2} mb={3}>
+          <TextField
+            label={t('common:email.inputLabel')}
+            placeholder={t('common:email.inputPlaceholder') as string}
+            multiline
+            minRows={6}
             value={emails}
             onChange={(e) => setEmails(e.target.value)}
-            placeholder={t('common:email.inputPlaceholder')}
-            className="w-full h-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            fullWidth
           />
-        </div>
+        </Stack>
 
         {/* Advanced Options */}
-        <div className="mb-4">
-          <button
+        <Box mb={3}>
+          <Button
+            size="small"
+            startIcon={<Cog6ToothIcon className="w-4 h-4" />}
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
           >
-            <Cog6ToothIcon className="w-4 h-4" />
-            ⚙️ {t('common:ui.advanced')}
-          </button>
-          
-          {showAdvanced && (
-            <div className="mt-2 space-y-2">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={enableSmtp}
-                  onChange={(e) => setEnableSmtp(e.target.checked)}
-                  className="mr-2"
-                />
-                {t('common:options.enableSmtp')}
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={enableCatchAll}
-                  onChange={(e) => setEnableCatchAll(e.target.checked)}
-                  className="mr-2"
-                />
-                {t('common:options.enableCatchAll')}
-              </label>
-            </div>
-          )}
-        </div>
+            {t('common:ui.advanced')}
+          </Button>
+          <Collapse in={showAdvanced}>
+            <Stack direction="row" spacing={2} mt={2}>
+              <FormControlLabel
+                control={<Checkbox checked={enableSmtp} onChange={(e) => setEnableSmtp(e.target.checked)} />}
+                label={t('common:options.enableSmtp')}
+              />
+              <FormControlLabel
+                control={<Checkbox checked={enableCatchAll} onChange={(e) => setEnableCatchAll(e.target.checked)} />}
+                label={t('common:options.enableCatchAll')}
+              />
+            </Stack>
+          </Collapse>
+        </Box>
 
-        {/* Validate Button */}
-        <button
-          onClick={handleValidate}
-          disabled={isPending || !emails.trim() || !isAuthenticated}
-          className={clsx(
-            "flex items-center gap-2 px-4 py-2 rounded-md font-medium",
-            isPending || !emails.trim() || !isAuthenticated
-              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-              : "bg-blue-600 text-white hover:bg-blue-700"
-          )}
-        >
-          {isPending ? (
-            <ArrowPathIcon className="w-4 h-4 animate-spin" />
-          ) : null}
-          {isPending ? t('common:ui.validating') : t('common:ui.validate')}
-        </button>
+        {/* Action Buttons */}
+        <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
+          <CsvUploader 
+            embedded 
+            onEmailsLoaded={handleCsvEmailsLoaded}
+          />
+          <Stack direction="row" spacing={2}>
+            <Button
+              variant="contained"
+              onClick={handleValidate}
+              disabled={isPending || (!emails.trim() && csvEmails.length === 0) || !isAuthenticated}
+              startIcon={isPending ? <CircularProgress size={18} /> : undefined}
+            >
+              {isPending ? t('common:ui.validating') : t('common:ui.validate')}
+            </Button>
+          </Stack>
+        </Stack>
 
         {/* Error Display */}
         {typedError && (
-          <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          <Alert sx={{ mt: 2 }} severity="error">
             {t('common:ui.error')}: {typedError.message}
-          </div>
+          </Alert>
         )}
-      </div>
+      </Paper>
+
+      {/* Progress Bar - Full Width */}
+      {isPending && (
+        <Box sx={{ width: '100%', mt: 2 }}>
+          <LinearProgress />
+          <Typography variant="body2" sx={{ mt: 1, textAlign: 'center' }}>{t('common:ui.validating')}</Typography>
+        </Box>
+      )}
 
       {/* Results Table */}
       {validationData?.results && (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-semibold">{t('common:results.title')}</h3>
-            <button
-              onClick={handleDownloadCSV}
-              className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-            >
-              <DocumentArrowDownIcon className="w-4 h-4" />
+        <Paper elevation={3} sx={{ p: 4 }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h6">{t('common:results.title')}</Typography>
+            <Button variant="outlined" startIcon={<DocumentArrowDownIcon className="w-4 h-4" />} onClick={handleDownloadCSV}>
               {t('common:results.downloadCsv')}
-            </button>
-          </div>
+            </Button>
+          </Stack>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('common:results.table.email')}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('common:results.table.status')}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {t('common:results.table.details')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {validationData.results.map((result: ValidationResult, index: number) => (
-                  <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {result.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={clsx(
-                        "inline-flex px-2 py-1 text-xs font-semibold rounded-full border",
-                        getStatusColor(result.status)
-                      )}>
-                        {t(`validation:status.${result.status}`, result.status)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {result.details ?? '-'}
-                    </td>
-                  </tr>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t('common:results.table.email')}</TableCell>
+                  <TableCell>{t('common:results.table.status')}</TableCell>
+                  <TableCell>{t('common:results.table.details')}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {validationData.results
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((result: ValidationResult, index: number) => (
+                  <TableRow key={index}>
+                    <TableCell>{result.email}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={t(`validation:status.${result.status}`, result.status)}
+                        color={
+                          result.status === 'valid'
+                            ? 'success'
+                            : result.status === 'unknown_error' || result.status === 'temporary_error'
+                            ? 'warning'
+                            : 'error'
+                        }
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell>{result.details ?? '-'}</TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              </TableBody>
+            </Table>
+            <TablePagination
+              component="div"
+              count={validationData.results.length}
+              page={page}
+              onPageChange={handleChangePage}
+              rowsPerPage={rowsPerPage}
+              rowsPerPageOptions={[rowsPerPage]}
+            />
+          </TableContainer>
+        </Paper>
       )}
-    </div>
+    </Stack>
   )
 } 
