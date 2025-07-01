@@ -163,7 +163,7 @@ jobs:
 
     - name: Build backend Docker image
       run: |
-        docker build -f backend/Dockerfile -t email-validator-backend .
+        docker build -t email-validator-backend .
 
     - name: Test Docker image
       run: |
