@@ -1,8 +1,8 @@
-"""Top-level package for backend code used in tests and application runtime.""" 
+"""Top-level package for backend code used in tests and application runtime."""
 
+import importlib
 import os
 import sys
-import importlib
 
 # Ensure that the `backend` directory is on PYTHONPATH so that `import app` works
 _backend_dir = os.path.abspath(os.path.dirname(__file__))
@@ -22,4 +22,4 @@ else:
     sys.modules.setdefault("backend.app", sys.modules["app"])  # type: ignore
 
 # Clean up to avoid leaking internal names
-del os, _backend_dir, importlib 
+del os, _backend_dir, importlib

@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -10,7 +11,6 @@ from app.metrics import (
     set_smtp_connections,
 )
 from fastapi.testclient import TestClient
-from contextlib import contextmanager
 
 
 @pytest.fixture
@@ -119,8 +119,8 @@ class TestMetricsIntegration:
         """Test that validation endpoint records metrics"""
 
         # Override the auth dependency globally for this request so no real JWT is required
-        from app.main import app as _fastapi_app
         from app.api.routes import get_current_user_with_key_manager as _get_user
+        from app.main import app as _fastapi_app
 
         _fastapi_app.dependency_overrides = getattr(_fastapi_app, "dependency_overrides", {})  # type: ignore
         _fastapi_app.dependency_overrides[_get_user] = lambda: {
@@ -146,11 +146,14 @@ class TestMetricsIntegration:
                 # Mock validator service
                 with patch("app.api.routes.EmailValidatorService") as mock_validator:
                     from unittest.mock import AsyncMock
+
                     mock_service = MagicMock()
-                    mock_service.validate_many = AsyncMock(return_value=[
-                        {"status": "valid", "email": "test@example.com", "is_valid": True},
-                        {"status": "invalid", "email": "invalid@example.com", "is_valid": False},
-                    ])
+                    mock_service.validate_many = AsyncMock(
+                        return_value=[
+                            {"status": "valid", "email": "test@example.com", "is_valid": True},
+                            {"status": "invalid", "email": "invalid@example.com", "is_valid": False},
+                        ]
+                    )
                     mock_validator.return_value = mock_service
 
                     # Make request (auth header no longer needed due to override)

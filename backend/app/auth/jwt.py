@@ -7,9 +7,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 
 import jwt
-from jwt import PyJWTError
 from email_validator_tool.config import get_settings
 from fastapi import HTTPException, status
+from jwt import PyJWTError
 from loguru import logger
 
 # JWT Configuration

@@ -5,53 +5,51 @@ This file also contains several global tweaks to make the whole test-suite
 work smoothly when running inside `pytest-asyncio` and with FastAPI.
 """
 
+import asyncio
+import asyncio as _asyncio
+import inspect
 import os
 import time
-from unittest.mock import patch
 from contextlib import contextmanager
+from unittest.mock import patch
 
 import pytest
-from app.main import app, limiter as _global_limiter
+from app.main import app
+from app.main import limiter as _global_limiter
 from email_validator_tool.core.pipeline import ValidationPipeline
 from email_validator_tool.core.results import ValidationResult
+from email_validator_tool.key_manager import create_key_manager
 from fastapi.testclient import TestClient
-from app.api import routes as _routes_module
-from app.api.routes import get_current_user_with_key_manager as _orig_get_user
-from app.auth.base import require_role as _require_role
-import inspect, asyncio
-import asyncio as _asyncio
+from sqlalchemy import text as _sql_text
+from sqlmodel.orm.session import Session as _SQLSession
 
 # Set test environment variables to increase rate limits for testing
 os.environ["ENVIRONMENT"] = "test"
 os.environ["JWT_ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
 os.environ["RATE_LIMIT_PER_MINUTE"] = "10000"  # Very high rate limit for tests
 
-# Note: We keep rate limiting enabled so tests that exercise rate limiting behave correctly.
-
-from email_validator_tool.key_manager import create_key_manager
-import sqlite3
-
 try:
-    import pytest_benchmark.plugin  # type: ignore
+    import pytest_benchmark.plugin  # type: ignore # noqa: F401
+
     _benchmark_plugin_loaded = True
 except ImportError:
     _benchmark_plugin_loaded = False
 
-from sqlmodel.orm.session import Session as _SQLSession
-from sqlalchemy import text as _sql_text
-
 # Patch Session.exec once to accept raw SQL strings used in some legacy tests
 _orig_exec = _SQLSession.exec
+
 
 def _exec_with_text(self, statement, *args, **kwargs):
     if isinstance(statement, str):
         statement = _sql_text(statement)
     return _orig_exec(self, statement, *args, **kwargs)
 
+
 _SQLSession.exec = _exec_with_text
 
 # Store original rate limit functions
 _original_rate_limit_functions = {}
+
 
 @contextmanager
 def disable_rate_limiting():
@@ -65,6 +63,7 @@ def disable_rate_limiting():
         def no_limit(*args, **kwargs):
             def decorator(func):
                 return func
+
             return decorator
 
         _global_limiter.limit = no_limit
@@ -80,17 +79,19 @@ def disable_rate_limiting():
         if original_enabled_state is not None:
             _global_limiter.enabled = original_enabled_state
 
+
 @contextmanager
 def reset_rate_limit_counters():
     """Context manager to reset rate limit counters between tests."""
     try:
         # Clear the rate limit storage
-        if hasattr(_global_limiter, 'storage'):
+        if hasattr(_global_limiter, "storage"):
             _global_limiter.storage.clear()
         yield
     except Exception:
         # If clearing fails, just continue
         yield
+
 
 @pytest.fixture
 def no_rate_limit():
@@ -98,18 +99,20 @@ def no_rate_limit():
     with disable_rate_limiting():
         yield
 
+
 @pytest.fixture
 def reset_limits():
     """Fixture to reset rate limit counters before a test."""
     with reset_rate_limit_counters():
         yield
 
+
 @pytest.fixture
 def high_rate_limit():
     """Fixture to set very high rate limits for a test."""
     # Store original environment
     original_limit = os.environ.get("RATE_LIMIT_PER_MINUTE", "1000")
-    
+
     try:
         # Set very high limits
         os.environ["RATE_LIMIT_PER_MINUTE"] = "100000"
@@ -117,6 +120,7 @@ def high_rate_limit():
     finally:
         # Restore original
         os.environ["RATE_LIMIT_PER_MINUTE"] = original_limit
+
 
 @pytest.fixture
 def valid_email():
@@ -229,6 +233,7 @@ def setup_test_api_keys():
 
 
 if not _benchmark_plugin_loaded:
+
     @pytest.fixture
     def benchmark():
         """Stub benchmark fixture when pytest-benchmark plugin is not available."""
@@ -242,7 +247,9 @@ if not _benchmark_plugin_loaded:
 
         return _run
 
+
 _original_asyncio_run = _asyncio.run
+
 
 def _safe_asyncio_run(main, *args, **kwargs):  # type: ignore
     """A drop-in replacement for `asyncio.run` that works inside an active loop.
@@ -254,22 +261,17 @@ def _safe_asyncio_run(main, *args, **kwargs):  # type: ignore
     ``loop.run_until_complete`` so the test continues to work.
     """
 
-    running_loop = _asyncio.get_running_loop()
-
-    # Prepare the coroutine to execute
-    if _asyncio.iscoroutine(main):
-        coro = main
-    else:
-        coro = main(*args, **kwargs)
-
     import threading
-    
-    result_holder = {}
-    exc_holder = {}
+
+    result_holder: dict[str, object] = {}
+    exc_holder: dict[str, Exception] = {}
 
     def _thread_runner():
         try:
-            result_holder["value"] = _original_asyncio_run(coro)
+            if _asyncio.iscoroutine(main):
+                result_holder["value"] = _original_asyncio_run(main)
+            else:
+                result_holder["value"] = _original_asyncio_run(main(*args, **kwargs))
         except Exception as e:  # pragma: no cover
             exc_holder["err"] = e
 
@@ -281,6 +283,7 @@ def _safe_asyncio_run(main, *args, **kwargs):  # type: ignore
         raise exc_holder["err"]
 
     return result_holder.get("value")
+
 
 # Apply monkey-patch once when tests are imported
 _asyncio.run = _safe_asyncio_run

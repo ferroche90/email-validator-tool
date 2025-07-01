@@ -3,21 +3,21 @@ import os
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 from fastapi.responses import Response
 from prometheus_client import generate_latest
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+
+# Local imports (added back after refactor)
+from .database.database import create_db_and_tables
 
 # Import the shared limiter instance
 from .limiter import limiter
+from .metrics import add_start_time_middleware, create_instrumentator
 
 # Import API router after limiter is available to avoid circular imports
 from .api.routes import router as api_router  # noqa: E402, isort: skip
 
-# Local imports (added back after refactor)
-from .database.database import create_db_and_tables
-from .metrics import add_start_time_middleware, create_instrumentator
 
 app = FastAPI(title="Email Validator API")
 

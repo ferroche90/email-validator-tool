@@ -9,6 +9,7 @@ from app.database.models import (
     User,
     UserResponse,
 )
+from app.limiter import limiter
 from app.metrics import increment_emails_validated, record_batch_size
 from email_validator_tool.config import get_settings
 from email_validator_tool.key_manager import create_key_manager
@@ -18,7 +19,6 @@ from email_validator_tool.validators.dns_mx import DNSMXValidator
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
-from app.limiter import limiter
 
 from ..services.validator_adapter import EmailValidatorService
 
@@ -30,6 +30,7 @@ _global_dns_validator = DNSMXValidator(
 _global_bounce_validator = BounceListValidator()
 
 router = APIRouter()
+
 
 class ValidateRequest(BaseModel):
     emails: List[str]

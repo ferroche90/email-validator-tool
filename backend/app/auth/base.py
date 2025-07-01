@@ -49,7 +49,7 @@ def get_current_user(
 def get_current_user_with_key_manager(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     """Get current user from JWT token or, for backward-compatibility, from a raw API key."""
     token = credentials.credentials
-    
+
     # First, try to verify as JWT token
     try:
         payload = verify_token(token)

@@ -12,7 +12,9 @@ def _load_free_providers_file() -> Set[str]:
     """Load free provider domains from the text file (one domain per line)."""
     providers: Set[str] = set()
     if not _FREE_PROVIDERS_FILE.exists():
-        logger.warning(f"Free providers file '{_FREE_PROVIDERS_FILE}' not found – using default free providers list for tests.")
+        logger.warning(
+            f"Free providers file '{_FREE_PROVIDERS_FILE}' not found – using default free providers list for tests."
+        )
         # Minimal default list that unit-tests expect
         providers.update({"gmail.com", "yahoo.com", "hotmail.com"})
         return providers

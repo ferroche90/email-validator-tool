@@ -9,7 +9,7 @@ def test_validate_emails(client: TestClient, setup_test_api_keys, reset_limits, 
     """Test the /validate endpoint with authentication"""
     # Get a real JWT token first
     token = get_token_safely(client, "test_admin_api_key")
-    
+
     # Test data
     test_data = {
         "emails": ["hello@example.com"],
@@ -50,7 +50,7 @@ def test_validate_emails_endpoint(client, setup_test_api_keys, reset_limits, no_
         },
         headers={"Authorization": f"Bearer {token}"},
     )
-    
+
     # Should succeed
     assert response.status_code == 200
     data = response.json()

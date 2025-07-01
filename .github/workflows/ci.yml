@@ -99,10 +99,6 @@ jobs:
         cd frontend
         pnpm install --no-frozen-lockfile
 
-    - name: Run main Python tests
-      run: |
-        pytest backend/tests/ -v --cov=email_validator_tool --cov-report=xml
-
     - name: Run backend unit tests
       run: |
         cd backend
