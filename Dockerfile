@@ -17,13 +17,19 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy pyproject.toml and install dependencies
-COPY backend/pyproject.toml ./pyproject.toml
+# Copy minimal project files required for installing the Python package
+#   - pyproject.toml (build configuration)
+#   - README.md       (referenced in pyproject metadata)
+#   - email_validator_tool package source (required during editable install)
+COPY pyproject.toml ./pyproject.toml
+COPY README.md ./README.md
+COPY backend/email_validator_tool ./email_validator_tool
+
+# Install backend (and its optional "backend" extras) in editable mode
 RUN pip install --no-cache-dir -e .[backend]
 
 # Copy backend application code
 COPY backend/app ./app
-COPY backend/email_validator_tool ./email_validator_tool
 
 # Copy frontend build from previous stage
 COPY --from=frontend-builder /app/dist ./static
