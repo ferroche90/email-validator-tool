@@ -20,10 +20,10 @@ RUN apt-get update && apt-get install -y \
 # Copy minimal project files required for installing the Python package
 #   - pyproject.toml (build configuration)
 #   - README.md       (referenced in pyproject metadata)
-#   - email_validator_tool package source (required during editable install)
+#   - backend directory with the package (maintains same structure as local dev)
 COPY pyproject.toml ./pyproject.toml
 COPY README.md ./README.md
-COPY backend/email_validator_tool ./email_validator_tool
+COPY backend ./backend
 
 # Install backend (and its optional "backend" extras) in editable mode
 RUN pip install --no-cache-dir -e .[backend]
