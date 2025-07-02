@@ -19,10 +19,10 @@ describe('i18n Integration', () => {
     expect(screen.getByRole('button', { name: 'Validate' })).toBeInTheDocument()
   })
 
-  it('should show authentication status in English', () => {
+  it('should show advanced options button in English', () => {
     render(<EmailChecker />)
     
-    // The component should show authentication status
-    expect(screen.getByText('Authenticated with JWT')).toBeInTheDocument()
+    // The component should show the advanced button
+    expect(screen.getByText('Advanced')).toBeInTheDocument()
   })
 }) 

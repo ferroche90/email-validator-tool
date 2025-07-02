@@ -1,5 +1,6 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
+import { render } from './test-utils'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import '@testing-library/jest-dom'
@@ -20,6 +21,11 @@ vi.mock('react-i18next', async () => {
       i18n: mockI18n,
     }),
   }
+})
+
+// Reset mock before each test
+beforeEach(() => {
+  mockChangeLanguage.mockClear()
 })
 
 describe('LanguageSwitcher', () => {
@@ -44,6 +50,9 @@ describe('LanguageSwitcher', () => {
   })
 
   it('should call changeLanguage with "en" when clicking English button', () => {
+    // Set initial language to Spanish so clicking EN triggers a change
+    mockI18n.language = 'es'
+
     render(<LanguageSwitcher />)
 
     const englishButton = screen.getByText('EN')

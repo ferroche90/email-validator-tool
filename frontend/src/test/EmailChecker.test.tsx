@@ -1,13 +1,36 @@
 import React from 'react'
-import { render, screen, fireEvent } from '../test/test-utils'
+import { render, screen, fireEvent, waitFor } from '../test/test-utils'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EmailChecker } from '../components/EmailChecker'
+import { useValidateEmails } from '../lib/useValidateEmails'
+import { renderHook, act } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { I18nextProvider } from 'react-i18next'
+import i18n from '../i18n'
 
 // Mock the useValidateEmails hook
 const mockUseValidateEmails = vi.fn()
 vi.mock('../lib/useValidateEmails', () => ({
   useValidateEmails: () => mockUseValidateEmails(),
 }))
+
+// Create a wrapper for renderHook
+const TestWrapper = ({ children }: { children: React.ReactNode }) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <I18nextProvider i18n={i18n}>
+        {children}
+      </I18nextProvider>
+    </QueryClientProvider>
+  )
+}
 
 describe('EmailChecker', () => {
   beforeEach(() => {
@@ -38,8 +61,10 @@ describe('EmailChecker', () => {
 
     render(<EmailChecker />)
 
-    expect(screen.getByText(/Validating.../i)).toBeInTheDocument()
+    // Button should be disabled and show validating text
     expect(screen.getByRole('button', { name: /Validating.../i })).toBeDisabled()
+    // At least one validating text (button or progress label) should be rendered
+    expect(screen.getAllByText(/Validating.../i).length).toBeGreaterThan(0)
   })
 
   it('should display error message when validation fails', () => {
@@ -121,31 +146,36 @@ describe('EmailChecker', () => {
     })
   })
 
-  it('should toggle advanced options when clicked', () => {
-    mockUseValidateEmails.mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-      error: null,
-      data: undefined,
-    } as any)
-
+  it('should toggle advanced options when clicked', async () => {
     render(<EmailChecker />)
 
-    const advancedButton = screen.getByText(/⚙️ Advanced/i)
-    
-    // Advanced options should be hidden initially
-    expect(screen.queryByText(/Enable SMTP verification/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/Enable catch-all detection/i)).not.toBeInTheDocument()
+    const advancedButton = screen.getByText(/Advanced/i)
 
-    // Click advanced button
+    const smtpLabel = screen.getByText(/Enable SMTP verification/i)
+    const catchAllLabel = screen.getByText(/Enable catch-all detection/i)
+
+    // Advanced options should be hidden initially (not visible)
+    expect(smtpLabel).not.toBeVisible()
+    expect(catchAllLabel).not.toBeVisible()
+
+    // Click the advanced button to show options
     fireEvent.click(advancedButton)
 
-    // Advanced options should be visible
-    expect(screen.getByText(/Enable SMTP verification/i)).toBeInTheDocument()
-    expect(screen.getByText(/Enable catch-all detection/i)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(smtpLabel).toBeVisible()
+      expect(catchAllLabel).toBeVisible()
+    })
+
+    // Click again to hide options
+    fireEvent.click(advancedButton)
+
+    await waitFor(() => {
+      expect(smtpLabel).not.toBeVisible()
+      expect(catchAllLabel).not.toBeVisible()
+    })
   })
 
-  it('should include advanced options in validation request', async () => {
+  it('should include advanced options in validation request', () => {
     const mockMutate = vi.fn()
     mockUseValidateEmails.mockReturnValue({
       mutate: mockMutate,
@@ -157,26 +187,28 @@ describe('EmailChecker', () => {
     render(<EmailChecker />)
 
     const textarea = screen.getByLabelText(/Email Addresses/i)
-    const advancedButton = screen.getByText(/⚙️ Advanced/i)
+    const advancedButton = screen.getByText(/Advanced/i)
     const button = screen.getByRole('button', { name: /Validate/i })
 
-    // Enter email and enable advanced options
-    fireEvent.change(textarea, { target: { value: 'test@example.com' } })
-    fireEvent.click(advancedButton)
-    
-    const smtpCheckbox = screen.getByLabelText(/Enable SMTP verification/i)
-    const catchAllCheckbox = screen.getByLabelText(/Enable catch-all detection/i)
-    
-    fireEvent.click(smtpCheckbox)
-    fireEvent.click(catchAllCheckbox)
+    // Enter some emails
+    fireEvent.change(textarea, {
+      target: { value: 'test@example.com\nanother@test.com' }
+    })
 
-    // Click validate button
+    // Enable advanced options
+    fireEvent.click(advancedButton)
+    const smtpLabel = screen.getByText(/Enable SMTP verification/i)
+    const catchAllLabel = screen.getByText(/Enable catch-all detection/i)
+    fireEvent.click(smtpLabel)
+    fireEvent.click(catchAllLabel)
+
+    // Click validate
     fireEvent.click(button)
 
     expect(mockMutate).toHaveBeenCalledWith({
-      emails: ['test@example.com'],
+      emails: ['test@example.com', 'another@test.com'],
       enable_smtp: true,
-      enable_catch_all: true,
+      enable_catch_all: true
     })
   })
 

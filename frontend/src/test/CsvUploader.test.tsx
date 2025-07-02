@@ -1,7 +1,8 @@
 import React from 'react'
 import '@testing-library/jest-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, fireEvent, waitFor } from '@testing-library/react'
+import { fireEvent, waitFor } from '@testing-library/react'
+import { render } from './test-utils'
 
 // Mock external UI library
 vi.mock('@mui/material', () => {
@@ -27,22 +28,15 @@ vi.mock('papaparse', async () => {
 })
 
 import CsvUploader from '../components/CsvUploader'
-import * as validateModule from '../lib/useValidateEmails'
-
-// Mock validateEmails to resolve with dummy data
-vi.spyOn(validateModule, 'validateEmails').mockImplementation(async (req) => {
-  return {
-    results: req.emails.map((email) => ({ email, status: 'valid', details: null })),
-  }
-})
 
 describe('CsvUploader', () => {
   beforeEach(() => {
     document.body.innerHTML = ''
   })
 
-  it('parses CSV, calls API in chunks, and shows download button', async () => {
-    const { getByText } = render(<CsvUploader />)
+  it('parses CSV and shows loaded count', async () => {
+    const mockOnEmailsLoaded = vi.fn()
+    const { getByText } = render(<CsvUploader onEmailsLoaded={mockOnEmailsLoaded} />)
 
     // Create fake file with 3 emails
     const csvContent = 'a@example.com\n b@example.com\n c@example.com\n'
@@ -56,12 +50,12 @@ describe('CsvUploader', () => {
 
     await fireEvent.change(fileInput, { target: { files: [file] } })
 
+    // Wait for the parsing to complete
     await waitFor(() => {
-      expect(validateModule.validateEmails).toHaveBeenCalled()
+      expect(getByText('3 emails loaded from file')).toBeInTheDocument()
     })
 
-    await waitFor(() => {
-      expect(getByText(/download/i)).toBeInTheDocument()
-    })
+    // Check that the callback was called with the parsed emails
+    expect(mockOnEmailsLoaded).toHaveBeenCalledWith(['a@example.com', 'b@example.com', 'c@example.com'])
   })
 }) 

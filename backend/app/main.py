@@ -28,7 +28,7 @@ app = FastAPI(title="Email Validator API")
 @app.on_event("startup")
 async def startup_event():
     create_db_and_tables()
-    
+
     # Mount static files for frontend
     static_path = Path(__file__).parent.parent / "frontend" / "dist"
     if static_path.exists():

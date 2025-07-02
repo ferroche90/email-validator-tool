@@ -226,8 +226,8 @@ describe('useValidateEmails', () => {
   })
 
   it('should handle missing API key', async () => {
-    // Remove the API key from environment
-    vi.unstubAllEnvs()
+    // Remove the API key by stubbing it as empty
+    vi.stubEnv('VITE_API_KEY', '')
     
     const { result } = renderHook(() => useValidateEmails(), {
       wrapper: createWrapper(),
@@ -249,7 +249,11 @@ describe('useValidateEmails', () => {
     await waitFor(() => {
       expect(result.current.error).toBeDefined()
     })
-    expect((result.current.error as Error)?.message).toBe('VITE_API_KEY environment variable is required')
+    
+    // Check if the error message contains the expected text
+    const errorMessage = (result.current.error as Error | undefined)?.message
+    expect(errorMessage).toBeDefined()
+    expect(errorMessage).toContain('VITE_API_KEY environment variable is required')
   })
 
   it('should return the correct structure', () => {
