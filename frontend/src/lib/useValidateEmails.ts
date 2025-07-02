@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query'
 import axios from 'axios'
 import type { ValidateRequest, ValidateResponse } from '../types'
+import { obtainJwtToken } from './useAuth'
 
 // Create axios instance with base configuration
 const createApi = () => axios.create({
@@ -14,21 +15,9 @@ const createApi = () => axios.create({
 const validateEmails = async (request: ValidateRequest): Promise<ValidateResponse> => {
   const apiInstance = createApi()
   
-  // Get JWT token from useAuth hook's getToken function
-  // We'll get the token from the global auth state instead of duplicating logic
-  const apiKey = import.meta.env.VITE_API_KEY
-  if (!apiKey) {
-    throw new Error('VITE_API_KEY environment variable is required')
-  }
-
   try {
-    // Get JWT token first
-    const tokenResponse = await apiInstance.post<{ access_token: string }>('/api/token', { api_key: apiKey })
-    const jwtToken = tokenResponse.data.access_token
-    
-    if (!jwtToken || typeof jwtToken !== 'string') {
-      throw new Error('Invalid token received from server')
-    }
+    // Obtain (and refresh if needed) the JWT using the shared auth helper
+    const jwtToken = await obtainJwtToken()
 
     // Add authorization header for the validation request
     const response = await apiInstance.post<ValidateResponse>('/api/validate', request, {

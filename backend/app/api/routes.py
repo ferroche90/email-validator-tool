@@ -17,6 +17,7 @@ from email_validator_tool.utils.paths import get_data_dir
 from email_validator_tool.validators.bounce_list import BounceListValidator
 from email_validator_tool.validators.dns_mx import DNSMXValidator
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, EmailStr
 from sqlmodel import Session, select
 
@@ -72,6 +73,18 @@ class LoginResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class PublicTokenResponse(BaseModel):
+    """Response model for the *anonymous* token endpoint.
+
+    It mirrors :class:`TokenResponse` so the frontend can reuse the same
+    TypeScript interfaces if desired.
+    """
+
+    access_token: str
+    token_type: str = "bearer"
+    role: str = "public"
 
 
 def get_validator_service() -> EmailValidatorService:
@@ -288,3 +301,46 @@ async def login(
         access_token=access_token,
         user=UserResponse.from_orm(user),
     )
+
+
+@router.post("/public-token", response_model=PublicTokenResponse)
+@limiter.limit("100/minute")
+async def create_public_token(request: Request):
+    """Create a short-lived JWT for unauthenticated browser clients.
+
+    The token carries the role ``public`` and is meant for low-privilege
+    read-only operations (e.g. validating e-mails).  No API key or other
+    authentication is required so that the browser bundle does **not** need
+    to embed any secret.  A HttpOnly cookie is set as well to allow
+    progressive enhancement in the future.
+    """
+
+    # Payload is intentionally minimal – no user_id / organization_id.
+    payload = {"sub": "public_user", "role": "public"}
+
+    access_token = create_access_token(payload)
+
+    # Build response and set cookie.  In production the cookie is marked
+    # *Secure* so it is only sent over HTTPS.  We default to "Lax" which
+    # works for same-site requests (the SPA is served by the same origin).
+
+    settings = get_settings()
+    secure_cookie = settings.ENVIRONMENT == "prod"
+
+    response = JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"access_token": access_token, "token_type": "bearer", "role": "public"},
+    )
+
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=secure_cookie,
+        samesite="lax",
+        max_age=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        expires=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+    )
+
+    return response

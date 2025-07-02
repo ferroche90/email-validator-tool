@@ -4,9 +4,10 @@ services:
     env: docker
     plan: free
     dockerfilePath: ./Dockerfile
+
     envVars:
       - key: ENVIRONMENT
-        value: production
+        value: prod
       - key: DEBUG
         value: false
       - key: DATABASE_URL
@@ -47,6 +48,8 @@ services:
         value: "127.0.0.1,::1"
       - key: ENABLE_METRICS
         value: true
+      - key: VITE_API_URL
+        value: https://email-validator-api.onrender.com
 
 databases:
   - name: email-validator-tool-postgresql

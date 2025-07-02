@@ -24,8 +24,9 @@ COPY frontend ./frontend
 # Install Python dependencies
 RUN pip install --no-cache-dir -e .[backend]
 
-# Build frontend
-RUN cd frontend && pnpm install && pnpm build
+# Build frontend (only API_URL is required in production – no API key)
+ARG VITE_API_URL
+RUN cd frontend && VITE_API_URL=${VITE_API_URL} pnpm install && pnpm build
 
 # Create data directory (for SQLite fallback if needed)
 RUN mkdir -p data
