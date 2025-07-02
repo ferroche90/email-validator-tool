@@ -1,6 +1,5 @@
 import './App.css'
 import { EmailChecker } from './components/EmailChecker'
-import CsvUploader from './components/CsvUploader'
 import { createTheme, ThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 import Container from '@mui/material/Container'

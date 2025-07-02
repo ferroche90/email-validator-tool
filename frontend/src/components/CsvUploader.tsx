@@ -2,17 +2,7 @@ import { useState } from 'react'
 import { LinearProgress, Box, Typography, Button } from '@mui/material'
 import Stack from '@mui/material/Stack'
 import Papa from 'papaparse'
-import type { ValidationResult } from '../types'
 import { useTranslation } from 'react-i18next'
-
-// Helper to split array into chunks of given size
-const chunkArray = <T,>(array: T[], size: number): T[][] => {
-  const chunks: T[][] = []
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size))
-  }
-  return chunks
-}
 
 interface Props {
   embedded?: boolean;
