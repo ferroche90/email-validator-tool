@@ -2,6 +2,12 @@ import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 import type { AxiosInstance } from 'axios'
 
+// Extend expect with Jest DOM matchers
+import { expect } from 'vitest'
+import * as matchers from '@testing-library/jest-dom/matchers'
+
+expect.extend(matchers)
+
 // Mock fetch globally
 global.fetch = vi.fn()
 
