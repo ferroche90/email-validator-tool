@@ -20,6 +20,10 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 COPY pyproject.toml README.md ./
 COPY backend ./backend
 COPY frontend ./frontend
+COPY start.sh ./
+
+# Make startup script executable
+RUN chmod +x start.sh
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -e .[backend]
@@ -40,7 +44,4 @@ EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
-
-# Start command with database migrations
-CMD ["sh", "-c", "cd backend && alembic -c alembic.ini upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"] 
+    CMD curl -f http://localhost:8000/health || exit 1 
