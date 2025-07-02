@@ -10,8 +10,15 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 try:
     from app.database.database import DATABASE_URL
-    from app.database.models import SQLModel
-except ImportError:
+
+    # Import all models to ensure they are registered with SQLModel.metadata
+    # These imports are required for Alembic to detect the models
+    from app.database.models import Organization, SQLModel, User  # noqa: F401
+
+    print(f"Successfully imported SQLModel and models. Database URL: {DATABASE_URL}")
+
+except ImportError as e:
+    print(f"Import error: {e}")
     # Handle case where app is not available
     DATABASE_URL = None
     SQLModel = None
@@ -27,7 +34,15 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-target_metadata = SQLModel.metadata
+if SQLModel is not None:
+    target_metadata = SQLModel.metadata
+    print(f"Using SQLModel metadata with {len(target_metadata.tables)} tables")
+else:
+    # Fallback to empty metadata if SQLModel is not available
+    from sqlalchemy import MetaData
+
+    target_metadata = MetaData()
+    print("Using fallback metadata")
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -47,6 +62,10 @@ def run_migrations_offline() -> None:
     script output.
 
     """
+    if DATABASE_URL is None:
+        print("DATABASE_URL is not available, skipping migrations")
+        return
+
     url = DATABASE_URL
     context.configure(
         url=url,
@@ -66,6 +85,10 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    if DATABASE_URL is None:
+        print("DATABASE_URL is not available, skipping migrations")
+        return
+
     # Override the sqlalchemy.url in the config
     config.set_main_option("sqlalchemy.url", DATABASE_URL)
 

@@ -8,6 +8,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     curl \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Node.js and pnpm for frontend build
@@ -26,7 +27,7 @@ RUN pip install --no-cache-dir -e .[backend]
 # Build frontend
 RUN cd frontend && pnpm install && pnpm build
 
-# Create data directory
+# Create data directory (for SQLite fallback if needed)
 RUN mkdir -p data
 
 # Copy frontend build to backend directory for static serving
