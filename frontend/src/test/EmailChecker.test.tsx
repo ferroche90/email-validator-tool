@@ -2,35 +2,12 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '../test/test-utils'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EmailChecker } from '../components/EmailChecker'
-import { useValidateEmails } from '../lib/useValidateEmails'
-import { renderHook, act } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { I18nextProvider } from 'react-i18next'
-import i18n from '../i18n'
 
 // Mock the useValidateEmails hook
 const mockUseValidateEmails = vi.fn()
 vi.mock('../lib/useValidateEmails', () => ({
   useValidateEmails: () => mockUseValidateEmails(),
 }))
-
-// Create a wrapper for renderHook
-const TestWrapper = ({ children }: { children: React.ReactNode }) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  })
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <I18nextProvider i18n={i18n}>
-        {children}
-      </I18nextProvider>
-    </QueryClientProvider>
-  )
-}
 
 describe('EmailChecker', () => {
   beforeEach(() => {
