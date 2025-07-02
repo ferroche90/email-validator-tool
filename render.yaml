@@ -49,7 +49,7 @@ services:
       - key: ENABLE_METRICS
         value: true
       - key: VITE_API_URL
-        value: https://email-validator-api.onrender.com
+        value: https://email-validator-tool.onrender.com
 
 databases:
   - name: email-validator-tool-postgresql
