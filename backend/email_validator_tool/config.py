@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=60, description="JWT token expiration in minutes")
 
     # Database
-    DATABASE_URL: str = Field(default="sqlite:///app.db", description="Database connection URL")
+    DATABASE_URL: str = Field(default="sqlite:///data/app.db", description="Database connection URL")
 
     # Logging
     LOG_LEVEL: str = Field(default="INFO", description="Logging level")

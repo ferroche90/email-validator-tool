@@ -1,15 +1,36 @@
 import os
 from typing import Generator
 from urllib.parse import urlparse
+from pathlib import Path
 
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
-# Database URL from environment (default: ./app.db inside backend directory)
-# Ensure that the directory for a SQLite file-based database exists before the
-# engine tries to connect. This prevents `sqlite3.OperationalError: unable to
-# open database file` when the parent directory is missing.
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./app.db")
+# ---------------------------------------------------------------------------
+# Database configuration
+# ---------------------------------------------------------------------------
+# We want a single SQLite file during local development.  Place it in the
+# project-level `data/` directory so it is not confused with source files and
+# remains consistent no matter where the application is launched from.
+#
+#  • Default location: {PROJECT_ROOT}/data/app.db
+#  • Environment variable `DATABASE_URL` can override this if desired.
+#
+# Compute the absolute path to the project root (= three levels up from this
+# file: backend/app/database/database.py -> backend/app/database -> backend/app
+# -> backend  -> project root).
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+# Ensure the data directory exists
+DATA_DIR = PROJECT_ROOT / "data"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+# Assemble default SQLite URL
+default_sqlite_url = f"sqlite:///{DATA_DIR / 'app.db'}"
+
+# Read from environment or fall back to default
+DATABASE_URL = os.getenv("DATABASE_URL", default_sqlite_url)
+# ---------------------------------------------------------------------------
 
 # If we're using SQLite, make sure the directory for the DB file exists.
 parsed = urlparse(DATABASE_URL)
