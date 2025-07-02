@@ -30,7 +30,8 @@ RUN cd frontend && pnpm install && pnpm build
 RUN mkdir -p data
 
 # Copy frontend build to backend directory for static serving
-RUN cp -r frontend/dist backend/frontend/dist
+RUN mkdir -p backend/frontend \
+    && cp -r frontend/dist backend/frontend/
 
 # Expose port (Render will set $PORT)
 EXPOSE 8000
