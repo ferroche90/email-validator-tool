@@ -6,24 +6,24 @@ typer>=0.16.0
 asyncio>=3.4.3
 aiosmtplib>=4.0.1
 loguru>=0.7.3
-pydantic>=2.10.0
+pydantic>=2.11.7
 pydantic-settings>=2.0.0
 aiodns>=3.1.1
 
 # Backend-specific runtime requirements
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
+fastapi>=0.115.14
+uvicorn[standard]>=0.35.0
 slowapi>=0.1.0
 python-dotenv>=1.0.0
-httpx>=0.25.0
+httpx>=0.26.0
 
 # Database and authentication
-sqlmodel>=0.0.8
-alembic>=1.12.0
-psycopg2-binary>=2.9.0
+sqlmodel>=0.0.24
+alembic>=1.16.1
+psycopg2-binary>=2.9.9
 bcrypt>=4.0.1
 PyJWT>=2.8.0
-pydantic[email]>=2.0.0
+pydantic[email]>=2.11.7
 
 # Observability
 prometheus-fastapi-instrumentator>=6.1.0
@@ -36,8 +36,8 @@ cryptography>=41.0.0
 tabulate>=0.9.0
 
 # Development dependencies (optional)
-pytest>=8.4.1
-pytest-asyncio>=1.0.0
+pytest>=7.4.4
+pytest-asyncio>=0.23.3
 pytest-cov>=4.1.0
 pytest-benchmark>=4.0.0
 black>=25.1.0

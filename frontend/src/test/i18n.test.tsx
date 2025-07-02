@@ -1,28 +1,32 @@
-import React from 'react'
-import { screen } from '@testing-library/react'
-import { render } from './test-utils'
-import { EmailChecker } from '../components/EmailChecker'
-import { describe, it, expect } from 'vitest'
-import '@testing-library/jest-dom'
+import React from 'react';
+import { screen } from '@testing-library/react';
+import { render } from './test-utils';
+import { EmailChecker } from '../components/EmailChecker';
+import { describe, it, expect } from 'vitest';
+import '@testing-library/jest-dom';
 
 describe('i18n Integration', () => {
   it('should render translated text correctly', () => {
-    render(<EmailChecker />)
-    
+    render(<EmailChecker />);
+
     // Check that the main title is translated
-    expect(screen.getByText('Email Validator')).toBeInTheDocument()
-    
+    expect(screen.getByText('Email Validator')).toBeInTheDocument();
+
     // Check that the email input label is translated
-    expect(screen.getByLabelText('Email Addresses (one per line)')).toBeInTheDocument()
-    
+    expect(
+      screen.getByLabelText('Email Addresses (one per line)')
+    ).toBeInTheDocument();
+
     // Check that the validate button is translated
-    expect(screen.getByRole('button', { name: 'Validate' })).toBeInTheDocument()
-  })
+    expect(
+      screen.getByRole('button', { name: 'Validate' })
+    ).toBeInTheDocument();
+  });
 
   it('should show advanced options button in English', () => {
-    render(<EmailChecker />)
-    
+    render(<EmailChecker />);
+
     // The component should show the advanced button
-    expect(screen.getByText('Advanced')).toBeInTheDocument()
-  })
-}) 
+    expect(screen.getByText('Advanced')).toBeInTheDocument();
+  });
+});

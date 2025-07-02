@@ -33,14 +33,14 @@
 
 ## 1. Overview
 The service performs **three progressive validation phases**:
-1. **Syntax & domain checks** – RFC 5322 syntax, disposable/typo domains, role accounts.
-2. **DNS / MX look-ups** – asynchronous MX resolution with optional per-domain caching.
+1. **Syntax & domain checks** – RFC 5322 syntax, disposable/typo domains, role accounts, provider type detection.
+2. **DNS / MX look-ups** – asynchronous MX resolution with optional per-domain caching and catch-all detection.
 3. **SMTP handshake** *(optional)* – verifies mailboxes and catch-all servers without sending emails.
 
 Results are available via:
 * **REST API** – `POST /validate` returns per-address verdicts (+verdict codes).  
 * **CLI** – `email-validator validate emails.csv results.csv`.  
-* **React SPA** – modern interface with CSV upload, status badges & dark mode.
+* **React SPA** – modern interface with CSV upload, status badges & Material-UI components.
 
 ---
 
@@ -62,7 +62,7 @@ repo/
 │  ├─ alembic/            # Database migrations
 │  ├─ tests/              # Backend tests
 │  └─ Dockerfile          # Multi-stage Docker build
-├─ frontend/               # Vite + React 19 SPA (TypeScript, Tailwind CSS)
+├─ frontend/               # Vite + React 19 SPA (TypeScript, Material-UI)
 │  ├─ src/
 │  │  ├─ components/      # React components
 │  │  ├─ lib/             # API hooks and utilities
@@ -72,10 +72,12 @@ repo/
 ├─ infra/
 │  └─ env/                # *.example.env templates for each tier
 ├─ loadtest/               # Locust load-testing scenarios
-├─ docs/                   # ADRs, architecture diagrams, etc.
-├─ docker-compose.yml      # Spins up API + Caddy reverse-proxy
+├─ docker-compose.yml      # Spins up API + Caddy + Prometheus + Grafana
 ├─ pyproject.toml          # Python package configuration
-└─ Makefile                # One-liners for common dev tasks
+├─ Makefile                # One-liners for common dev tasks
+├─ STARTUP_GUIDE.md        # Detailed setup instructions
+├─ RAILWAY_DEPLOYMENT.md   # Railway deployment guide
+└─ MONITORING_SETUP.md     # Observability setup guide
 ```
 
 ---
@@ -94,18 +96,21 @@ repo/
 | Abuse / Bounce Lists | internal SQLite store | ✓ | ✓ | ✓ | Admin only |
 | Rate Limiting | sliding-window per JWT | – | ✓ | – | via `slowapi` |
 | Multi-tenancy | Organizations & Users | – | ✓ | – | SQLModel + JWT |
+| User Authentication | Email/Password + JWT | – | ✓ | – | bcrypt + PyJWT |
+| API Key Management | Encrypted storage | ✓ | ✓ | ✓ | CLI management |
 
 ---
 
 ## 4. Technology Stack
-* **Python 3.12+** – core library & FastAPI backend  
+* **Python 3.8+** – core library & FastAPI backend  
 * **FastAPI 0.104+** – async REST endpoints  
-* **React 19 + Vite 5** – frontend SPA  
+* **React 19 + Vite 6** – frontend SPA  
+* **Material-UI 5** – React component library
 * **SQLite / Postgres** – persistence (configurable via `DATABASE_URL`)  
 * **SQLModel** – SQLAlchemy + Pydantic integration  
 * **Docker & Caddy** – containerisation & TLS termination  
+* **Prometheus & Grafana** – metrics & dashboards  
 * **GitHub Actions** – CI (lint, test, build, deploy)  
-* **Prometheus / Grafana** – metrics & dashboards (see `infra/observability/`)
 
 ---
 
@@ -118,6 +123,8 @@ make dev        # → docker compose up --build
 Services:
 * `api` – FastAPI (`localhost:8000`)  
 * `caddy` – reverse-proxy with auto-reload (`localhost`)
+* `prometheus` – metrics collection (`localhost:9090`)
+* `grafana` – dashboards (`localhost:3000`)
 
 ### 5.2 Local Developer Setup
 ```bash
@@ -145,8 +152,11 @@ Copy the relevant file to project root (`.env`) or `frontend/.env` and adjust:
 | `DATABASE_URL` | `sqlite:///./data/email_validator.db` | SQLAlchemy DSN |
 | `RATE_LIMIT_REQUESTS_PER_MINUTE` | `100` | Per-key sliding window |
 | `ENABLE_DNS_CACHE` | `true` | Toggle MX cache |
+| `ENABLE_SMTP` | `false` | Enable SMTP validation |
+| `ENABLE_CATCH_ALL` | `false` | Enable catch-all detection |
 | `VITE_API_URL` | `http://localhost:8000` | Frontend → API base URL |
 | `VITE_API_KEY` | `test_admin_api_key` | Frontend auto-authentication |
+| `METRICS_ALLOWLIST` | `127.0.0.1,::1` | IPs allowed to access metrics |
 
 > **Tip** – any variable prefixed with `VITE_` is exposed to the SPA at build-time.
 
@@ -160,6 +170,8 @@ email-validator validate emails.csv results.csv \
 
 email-validator manage-keys create admin   # create API key
 email-validator cache-stats                # DNS cache insight
+email-validator clear-cache                # clear DNS cache
+email-validator bounce-stats               # bounce list statistics
 ```
 Run `email-validator --help` for the full tree.
 
@@ -173,11 +185,13 @@ Base URL defaults to `/` when served behind Caddy, or `/api` when served directl
 | `POST` | `/api/signup` | – | Create user account with organization |
 | `POST` | `/api/login` | – | User login (email/password) |
 | `POST` | `/api/token` | API-Key | Exchange API-Key → JWT |
+| `POST` | `/api/public-token` | – | Get anonymous access token |
 | `POST` | `/api/validate` | Bearer | Validate one or many addresses |
 | `GET` | `/health` | – | Liveness probe |
 | `GET` | `/metrics` | allow-list | Prometheus metrics |
 | `GET` | `/api/cache-stats` | Admin JWT | MX cache info |
-| `POST` | `/api/admin/reload-spamtraps` | Admin JWT | Refresh spam-trap list |
+| `POST` | `/api/cache-clear` | Admin JWT | Clear DNS cache |
+| `GET` | `/api/bounce-stats` | Admin JWT | Bounce list info |
 
 Swagger is available at `/docs` in non-prod environments.
 
@@ -213,6 +227,7 @@ Coverage ≥ 95 % is enforced by CI. `make lint` runs Black, Ruff and ESLint.
 * **Prometheus** endpoint at `/metrics` (disabled in prod unless `ENABLE_METRICS=true`).  
 * Grafana dashboard JSON under `infra/observability/grafana-dashboard.json`.  
 * Request latency, verdict counts, DNS cache hit/miss, and rate-limit rejects are tracked.
+* Docker Compose includes Prometheus and Grafana services for local monitoring.
 
 ---
 
@@ -244,12 +259,7 @@ locust -f loadtest/locustfile.py --host=http://localhost:8000
 ## 14. Deployment
 
 ### 14.1 Railway Deployment
-1. Fork this repository
-2. Connect your repository to Railway
-3. Create a new service from your GitHub repository
-4. Add a PostgreSQL database service (optional, SQLite will be used by default)
-5. Configure environment variables (see `railway.env.example`)
-6. Deploy
+See [`RAILWAY_DEPLOYMENT.md`](RAILWAY_DEPLOYMENT.md) for detailed instructions.
 
 **Required Environment Variables for Railway:**
 - `ENVIRONMENT=prod`
@@ -316,6 +326,8 @@ pnpm build
 * **CORS** configuration for production
 * **Environment variables** for sensitive data
 * **API key management** with encrypted storage
+* **Password hashing** with bcrypt
+* **Multi-tenancy** with organization isolation
 
 ---
 
@@ -332,6 +344,9 @@ A: Run `alembic -c backend/alembic.ini upgrade head`
 
 ### Q: API key authentication fails
 A: Create new API key with `email-validator manage-keys create admin`
+
+### Q: Monitoring services not accessible
+A: Check `METRICS_ALLOWLIST` environment variable and ensure your IP is included
 
 ---
 

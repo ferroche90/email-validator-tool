@@ -42,9 +42,32 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Add timing middleware
 app.middleware("http")(add_start_time_middleware)
 
+# CORS configuration
+# Get CORS origins from environment variable or use default based on environment
+cors_origins_str = os.getenv("CORS_ORIGINS", "")
+environment = os.getenv("ENVIRONMENT", "dev")
+
+if cors_origins_str:
+    # If CORS_ORIGINS is explicitly set, use it
+    cors_origins = [origin.strip() for origin in cors_origins_str.split(",")]
+elif environment == "dev":
+    # In development, allow localhost origins
+    cors_origins = [
+        "http://localhost:5173",  # Vite dev server
+        "http://localhost:5174",  # Alternative Vite port
+        "http://localhost:3000",  # Alternative dev server port
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:3000",
+    ]
+else:
+    # In production, you should set CORS_ORIGINS explicitly
+    # Default to same-origin only
+    cors_origins = []
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

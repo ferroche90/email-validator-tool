@@ -1,12 +1,12 @@
-import './App.css'
-import { EmailChecker } from './components/EmailChecker'
-import { createTheme, ThemeProvider } from '@mui/material/styles'
-import CssBaseline from '@mui/material/CssBaseline'
-import Container from '@mui/material/Container'
-import Box from '@mui/material/Box'
-import Header from './components/Header'
-import Typography from '@mui/material/Typography'
-import { useTranslation } from 'react-i18next'
+import './App.css';
+import { EmailChecker } from './components/EmailChecker';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import Container from '@mui/material/Container';
+import Box from '@mui/material/Box';
+import Header from './components/Header';
+import Typography from '@mui/material/Typography';
+import { useTranslation } from 'react-i18next';
 
 function App() {
   const theme = createTheme();
@@ -29,7 +29,7 @@ function App() {
         <EmailChecker />
       </Container>
     </ThemeProvider>
-  )
+  );
 }
 
-export default App
+export default App;

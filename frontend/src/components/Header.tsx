@@ -1,8 +1,8 @@
-import AppBar from '@mui/material/AppBar'
-import Toolbar from '@mui/material/Toolbar'
-import Typography from '@mui/material/Typography'
-import Box from '@mui/material/Box'
-import LanguageSwitcher from './LanguageSwitcher'
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const Header = () => {
   return (
@@ -16,7 +16,7 @@ const Header = () => {
         </Box>
       </Toolbar>
     </AppBar>
-  )
-}
+  );
+};
 
-export default Header 
+export default Header;

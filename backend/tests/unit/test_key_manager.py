@@ -258,9 +258,10 @@ class TestCLIIntegration:
         mock_key_manager.create_key.return_value = mock_api_key
 
         # Patch JWT token generation and typer.echo with nested context managers
-        with patch("email_validator_tool.cli.generate_jwt_for_key", return_value="jwt_token_123") as mock_jwt_fn, patch(
-            "typer.echo"
-        ) as mock_echo:
+        with (
+            patch("email_validator_tool.cli.generate_jwt_for_key", return_value="jwt_token_123") as mock_jwt_fn,
+            patch("typer.echo") as mock_echo,
+        ):
 
             create("user")
 

@@ -1,9 +1,9 @@
-import React from 'react'
-import { render, RenderOptions } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { I18nextProvider } from 'react-i18next'
-import i18n from '../i18n'
-import { vi } from 'vitest'
+import React from 'react';
+import { render, RenderOptions } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { I18nextProvider } from 'react-i18next';
+import i18n from '../i18n';
+import { vi } from 'vitest';
 
 // Mock the useAuth hook
 vi.mock('../lib/useAuth', () => ({
@@ -12,9 +12,9 @@ vi.mock('../lib/useAuth', () => ({
     isLoading: false,
     error: null,
     refreshToken: vi.fn(),
-    getToken: () => 'mock-jwt-token'
-  })
-}))
+    getToken: () => 'mock-jwt-token',
+  }),
+}));
 
 // Create a custom render function that includes providers
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
@@ -27,25 +27,23 @@ const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
         retry: false,
       },
     },
-  })
+  });
 
   return (
     <QueryClientProvider client={queryClient}>
-      <I18nextProvider i18n={i18n}>
-        {children}
-      </I18nextProvider>
+      <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
     </QueryClientProvider>
-  )
-}
+  );
+};
 
 const customRender = (
   ui: React.ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>,
-) => render(ui, { wrapper: AllTheProviders, ...options })
+  options?: Omit<RenderOptions, 'wrapper'>
+) => render(ui, { wrapper: AllTheProviders, ...options });
 
 // re-export everything
 // eslint-disable-next-line react-refresh/only-export-components
-export * from '@testing-library/react'
+export * from '@testing-library/react';
 
 // override render method
-export { customRender as render } 
+export { customRender as render };

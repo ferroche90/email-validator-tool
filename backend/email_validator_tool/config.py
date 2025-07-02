@@ -49,6 +49,12 @@ class Settings(BaseSettings):
     CSV_INPUT_PATH: str = Field(default="emails.csv", description="Input CSV file path")
     CSV_OUTPUT_PATH: str = Field(default="results.csv", description="Output CSV file path")
 
+    # Observability settings
+    METRICS_ALLOWLIST: str = Field(
+        default="127.0.0.1,::1", description="Comma-separated list of IPs allowed to access metrics"
+    )
+    ENABLE_METRICS: bool = Field(default=True, description="Enable metrics collection and endpoints")
+
     # Data directory (can be overridden via env vars DATA_DIR or EMAIL_VALIDATOR_DATA_DIR)
     DATA_DIR: Optional[str] = Field(
         default=None, description="Absolute path to the shared data directory", env="DATA_DIR"

@@ -4,7 +4,7 @@ This guide will help you deploy the Email Validator Tool to Railway.
 
 ## Prerequisites
 
-1. A GitHub account with this repository forked
+1. A GitHub account with this repository
 2. A Railway account (sign up at [railway.app](https://railway.app))
 
 ## Step-by-Step Deployment
@@ -14,19 +14,19 @@ This guide will help you deploy the Email Validator Tool to Railway.
 1. Go to [Railway Dashboard](https://railway.app/dashboard)
 2. Click "New Project"
 3. Select "Deploy from GitHub repo"
-4. Choose your forked repository
+4. Choose the repository
 5. Railway will automatically detect the `railway.json` configuration
 
 ### 2. Configure Environment Variables
 
-1. In your Railway project dashboard, go to the "Variables" tab
+1. In the Railway project dashboard, go to the "Variables" tab
 2. Add the following required environment variables:
 
 #### Required Variables:
 ```
 ENVIRONMENT=prod
 DEBUG=false
-JWT_SECRET_KEY=your-super-secure-jwt-secret-key-here
+JWT_SECRET_KEY=the-super-secure-jwt-secret-key-here
 ```
 
 #### Optional Variables (with recommended values):
@@ -43,14 +43,14 @@ CORS_ORIGINS=*
 
 ### 3. Add PostgreSQL Database (Optional)
 
-1. In your Railway project, click "New Service"
+1. In the Railway project, click "New Service"
 2. Select "Database" → "PostgreSQL"
 3. Railway will automatically provide the `DATABASE_URL` environment variable
 4. If you don't add PostgreSQL, the app will use SQLite by default
 
 ### 4. Deploy
 
-1. Railway will automatically build and deploy your application
+1. Railway will automatically build and deploy the application
 2. The build process will:
    - Install Python dependencies
    - Build the frontend with the correct API URL
@@ -61,19 +61,19 @@ CORS_ORIGINS=*
 
 After deployment:
 
-1. Note your Railway app URL (e.g., `https://your-app-name.railway.app`)
-2. Add this environment variable to your Railway project:
+1. Note the Railway app URL (e.g., `https://the-app-name.railway.app`)
+2. Add this environment variable to the Railway project:
    ```
-   VITE_API_URL=https://your-app-name.railway.app
+   VITE_API_URL=https://the-app-name.railway.app
    ```
 3. Redeploy the application to rebuild the frontend with the correct API URL
 
 ### 6. Verify Deployment
 
-1. Visit your Railway app URL
+1. Visit the Railway app URL
 2. You should see the Email Validator Tool interface
-3. Test the health endpoint: `https://your-app-name.railway.app/health`
-4. Check the API documentation: `https://your-app-name.railway.app/docs`
+3. Test the health endpoint: `https://the-app-name.railway.app/health`
+4. Check the API documentation: `https://the-app-name.railway.app/docs`
 
 ## Environment Variable Reference
 
@@ -106,7 +106,7 @@ After deployment:
 - Ensure `VITE_API_URL` is set correctly after deployment
 
 ### Frontend Issues
-- Make sure `VITE_API_URL` is set to your Railway app URL
+- Make sure `VITE_API_URL` is set to the Railway app URL
 - Redeploy after setting `VITE_API_URL` to rebuild the frontend
 - Check browser console for API connection errors
 
@@ -118,10 +118,10 @@ After deployment:
 
 ## Scaling
 
-Railway automatically scales your application based on traffic. You can also manually adjust resources in the Railway dashboard.
+Railway automatically scales the application based on traffic. We can also manually adjust resources in the Railway dashboard.
 
 ## Cost Optimization
 
 - Use SQLite instead of PostgreSQL for small deployments
 - Disable unused features like SMTP validation and catch-all detection
-- Monitor usage in the Railway dashboard 
+- Monitor usage in the Railway dashboard

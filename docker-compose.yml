@@ -3,12 +3,16 @@ version: '3.8'
 services:
   api:
     build: ./backend
+    ports:
+      - "8000:8000"
     environment:
       - API_KEY=${API_KEY}
       - ENABLE_METRICS=true
       - METRICS_ALLOWLIST=127.0.0.1,::1,172.16.0.0/12,192.168.0.0/16
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./app.db}
+      - DEBUG=${DEBUG:-false}
     volumes:
-      - ./backend/bounce_list.db:/app/bounce_list.db
+      - ./data:/app/data
     networks:
       - app-network
 
@@ -44,7 +48,6 @@ services:
     volumes:
       - ./infra/observability/grafana/datasources:/etc/grafana/provisioning/datasources
       - ./infra/observability/grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./infra/observability/grafana-dashboard.json:/etc/grafana/provisioning/dashboards/email-validator-dashboard.json
       - grafana_data:/var/lib/grafana
     networks:
       - app-network
