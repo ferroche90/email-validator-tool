@@ -1,45 +1,43 @@
-# Multi-stage build for Railway deployment
-FROM node:20-alpine AS frontend-builder
-WORKDIR /app
-COPY frontend/package*.json ./
-COPY frontend/pnpm-lock.yaml ./
-RUN npm install -g pnpm
-RUN pnpm install
-COPY frontend/ ./
-RUN pnpm build
+# Optimized Dockerfile for Render and general deployment
+FROM python:3.12-slim
 
-# Python backend stage
-FROM python:3.12-slim AS backend
+# Set working directory
 WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy minimal project files required for installing the Python package
-#   - pyproject.toml (build configuration)
-#   - README.md       (referenced in pyproject metadata)
-#   - backend directory with the package (maintains same structure as local dev)
-COPY pyproject.toml ./pyproject.toml
-COPY README.md ./README.md
-COPY backend ./backend
+# Install Node.js and pnpm for frontend build
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g pnpm
 
-# Install backend (and its optional "backend" extras) in editable mode
+# Copy project files
+COPY pyproject.toml README.md ./
+COPY backend ./backend
+COPY frontend ./frontend
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -e .[backend]
 
-# Copy backend application code
-COPY backend/app ./app
+# Build frontend
+RUN cd frontend && pnpm install && pnpm build
 
-# Copy frontend build from previous stage
-COPY --from=frontend-builder /app/dist ./static
+# Create data directory
+RUN mkdir -p data
 
-# Copy docker-compose and other configs
-COPY docker-compose.yml ./
-COPY infra/observability/ ./
+# Copy frontend build to backend directory for static serving
+RUN cp -r frontend/dist backend/frontend/dist
 
-# Expose port
+# Expose port (Render will set $PORT)
 EXPOSE 8000
 
-# Start the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"] 
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Start command with database migrations
+CMD ["sh", "-c", "cd backend && alembic -c alembic.ini upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"] 

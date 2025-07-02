@@ -1,9 +1,11 @@
 import ipaddress
 import os
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
 from prometheus_client import generate_latest
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -26,6 +28,11 @@ app = FastAPI(title="Email Validator API")
 @app.on_event("startup")
 async def startup_event():
     create_db_and_tables()
+    
+    # Mount static files for frontend
+    static_path = Path(__file__).parent.parent / "frontend" / "dist"
+    if static_path.exists():
+        app.mount("/", StaticFiles(directory=str(static_path), html=True), name="static")
 
 
 # Rate limiter setup (limiter is already created above)
