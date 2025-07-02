@@ -26,7 +26,7 @@ from sqlmodel.orm.session import Session as _SQLSession
 # Set test environment variables to increase rate limits for testing
 os.environ["ENVIRONMENT"] = "test"
 os.environ["JWT_ACCESS_TOKEN_EXPIRE_MINUTES"] = "60"
-os.environ["RATE_LIMIT_PER_MINUTE"] = "10000"  # Very high rate limit for tests
+os.environ["RATE_LIMIT_REQUESTS_PER_MINUTE"] = "10000"  # Very high rate limit for tests
 
 try:
     import pytest_benchmark.plugin  # type: ignore # noqa: F401
@@ -111,15 +111,15 @@ def reset_limits():
 def high_rate_limit():
     """Fixture to set very high rate limits for a test."""
     # Store original environment
-    original_limit = os.environ.get("RATE_LIMIT_PER_MINUTE", "1000")
+    original_limit = os.environ.get("RATE_LIMIT_REQUESTS_PER_MINUTE", "1000")
 
     try:
         # Set very high limits
-        os.environ["RATE_LIMIT_PER_MINUTE"] = "100000"
+        os.environ["RATE_LIMIT_REQUESTS_PER_MINUTE"] = "100000"
         yield
     finally:
         # Restore original
-        os.environ["RATE_LIMIT_PER_MINUTE"] = original_limit
+        os.environ["RATE_LIMIT_REQUESTS_PER_MINUTE"] = original_limit
 
 
 @pytest.fixture

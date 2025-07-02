@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = Field(default="*", description="CORS allowed origins")
 
     # Rate Limiting
-    RATE_LIMIT_PER_MINUTE: int = Field(default=60, description="Rate limit per minute")
+    RATE_LIMIT_REQUESTS_PER_MINUTE: int = Field(default=60, description="Rate limit per minute")
 
     # SMTP settings
     SMTP_TIMEOUT: int = Field(default=10, description="SMTP timeout in seconds")

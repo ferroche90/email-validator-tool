@@ -7,7 +7,7 @@ from sqlmodel import Session, SQLModel, create_engine
 # Database URL from environment
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./app.db")
 
-# Handle PostgreSQL URL format for Render
+# Handle PostgreSQL URL format for cloud platforms (Render, Railway, etc.)
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 

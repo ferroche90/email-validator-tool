@@ -1,4 +1,4 @@
-# Optimized Dockerfile for Render and general deployment
+# Optimized Dockerfile for Railway deployment
 FROM python:3.12-slim
 
 # Set working directory
@@ -35,7 +35,7 @@ RUN mkdir -p data
 RUN mkdir -p backend/frontend \
     && cp -r frontend/dist backend/frontend/
 
-# Expose port (Render will set $PORT)
+# Expose port (Railway will set $PORT)
 EXPOSE 8000
 
 # Health check

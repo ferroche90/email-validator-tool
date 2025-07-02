@@ -243,12 +243,27 @@ locust -f loadtest/locustfile.py --host=http://localhost:8000
 
 ## 14. Deployment
 
-### 14.1 Render.com Deployment
+### 14.1 Railway Deployment
 1. Fork this repository
-2. Update `render.yaml` with your repository URL
-3. Create a new Web Service on Render
-4. Configure environment variables (see `infra/env/prod.example.env`)
-5. Deploy
+2. Connect your repository to Railway
+3. Create a new service from your GitHub repository
+4. Add a PostgreSQL database service (optional, SQLite will be used by default)
+5. Configure environment variables (see `railway.env.example`)
+6. Deploy
+
+**Required Environment Variables for Railway:**
+- `ENVIRONMENT=prod`
+- `DEBUG=false`
+- `JWT_SECRET_KEY=your-secure-jwt-secret`
+- `DATABASE_URL=postgresql://...` (Railway will provide this if you add a PostgreSQL service)
+- `VITE_API_URL=https://your-app-name.railway.app` (set this after deployment)
+
+**Optional Environment Variables:**
+- `RATE_LIMIT_REQUESTS_PER_MINUTE=100`
+- `ENABLE_DNS_CACHE=true`
+- `ENABLE_SMTP=false`
+- `ENABLE_CATCH_ALL=false`
+- `ENABLE_METRICS=true`
 
 ### 14.2 Docker Deployment
 ```bash
