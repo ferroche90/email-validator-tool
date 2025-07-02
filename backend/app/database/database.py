@@ -1,7 +1,7 @@
 import os
+from pathlib import Path
 from typing import Generator
 from urllib.parse import urlparse
-from pathlib import Path
 
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine

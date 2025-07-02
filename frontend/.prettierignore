@@ -23,4 +23,7 @@ coverage/
 .DS_Store
 Thumbs.db
 
+# Static assets
+public/
+
 pnpm-lock.yaml 
