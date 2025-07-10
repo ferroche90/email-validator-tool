@@ -7,7 +7,7 @@ from sqlmodel import Session, select
 
 from ..database.database import get_session
 from ..database.models import Organization, User
-from .jwt import verify_access_token, verify_refresh_token
+from .jwt import verify_token
 
 security = HTTPBearer()
 
@@ -15,9 +15,9 @@ security = HTTPBearer()
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security), session: Session = Depends(get_session)
 ) -> User:
-    """Get current user from JWT access token"""
+    """Get current user from JWT token"""
     token = credentials.credentials
-    payload = verify_access_token(token)
+    payload = verify_token(token)
 
     user_id: Optional[int] = payload.get("user_id")
     if user_id is None:
@@ -50,9 +50,9 @@ def get_current_user_with_key_manager(credentials: HTTPAuthorizationCredentials 
     """Get current user from JWT token or, for backward-compatibility, from a raw API key."""
     token = credentials.credentials
 
-    # First, try to verify as JWT access token
+    # First, try to verify as JWT token
     try:
-        payload = verify_access_token(token)
+        payload = verify_token(token)
 
         # 1) Database-user JWTs (contain user_id)
         if "user_id" in payload:
@@ -90,40 +90,6 @@ def get_current_user_with_key_manager(credentials: HTTPAuthorizationCredentials 
         detail="Invalid token",
         headers={"WWW-Authenticate": "Bearer"},
     )
-
-
-def get_current_user_from_refresh_token(
-    credentials: HTTPAuthorizationCredentials = Depends(security), session: Session = Depends(get_session)
-) -> User:
-    """Get current user from JWT refresh token"""
-    token = credentials.credentials
-    payload = verify_refresh_token(token)
-
-    user_id: Optional[int] = payload.get("user_id")
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token payload",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Get user from database
-    user = session.exec(select(User).where(User.id == user_id)).first()
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Inactive user",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    return user
 
 
 def require_role(required_role: str):
