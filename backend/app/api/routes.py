@@ -2,330 +2,350 @@
 API routes for the email validator backend.
 """
 
-from datetime import timedelta
+import pathlib
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlmodel import Session
+from app.auth.base import get_current_user_with_key_manager, require_role
+from app.auth.jwt import create_access_token
+from app.database.database import get_session
+from app.database.models import (
+    Organization,
+    User,
+    UserResponse,
+)
+from app.limiter import limiter
+from app.metrics import increment_emails_validated, record_batch_size
+from email_validator_tool.config import get_settings
+from email_validator_tool.key_manager import create_key_manager
+from email_validator_tool.utils.paths import get_data_dir
+from email_validator_tool.validators.bounce_list import BounceListValidator
+from email_validator_tool.validators.dns_mx import DNSMXValidator
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, EmailStr
+from sqlmodel import Session, select
 
-from ..auth.base import get_current_user, get_current_user_from_refresh_token, require_role
-from ..auth.jwt import create_access_token, create_refresh_token, create_token_pair
-from ..database.database import get_session
-from ..database.models import Organization, OrganizationCreate, OrganizationResponse, User, UserCreate, UserResponse
-from email_validator_tool.key_manager import create_key_manager, APIKey
+from ..services.validator_adapter import EmailValidatorService
+
+# Global validator instances for sharing across requests
+_settings = get_settings()
+_global_dns_validator = DNSMXValidator(
+    cache_ttl_seconds=(_settings.DNS_CACHE_TTL_SECONDS if _settings.ENABLE_DNS_CACHE else 0)
+)
+_global_bounce_validator = BounceListValidator()
+
+
+class ValidateRequest(BaseModel):
+    emails: List[str]
+    enable_smtp: bool = False
+    enable_catch_all: bool = False
+
+
+class TokenRequest(BaseModel):
+    api_key: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    role: str
+
+
+class SignupRequest(BaseModel):
+    email: str
+    password: str
+    first_name: str
+    last_name: str
+    organization_name: str
+    organization_slug: str
+
+
+class SignupResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+
+class PublicTokenResponse(BaseModel):
+    """Response model for the *anonymous* token endpoint.
+
+    It mirrors :class:`TokenResponse` so the frontend can reuse the same
+    TypeScript interfaces if desired.
+    """
+
+    access_token: str
+    token_type: str = "bearer"
+    role: str = "public"
+
+
+def get_validator_service() -> EmailValidatorService:
+    """Dependency to inject EmailValidatorService with global validator instances"""
+    return EmailValidatorService(
+        dns_validator=_global_dns_validator,
+        bounce_validator=_global_bounce_validator,
+    )
+
 
 router = APIRouter()
-security = HTTPBearer()
 
 
-# Authentication routes
-@router.post("/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def register_user(user_data: UserCreate, session: Session = Depends(get_session)):
-    """Register a new user"""
+@router.post("/signup", response_model=SignupResponse)
+@limiter.limit("10/minute")
+async def signup(request: Request, signup_data: SignupRequest, session: Session = Depends(get_session)):
+    """
+    Create a new user account with organization.
+    Rate limited to 10 requests per minute per IP.
+    """
     # Check if user already exists
-    existing_user = session.exec(
-        session.query(User).where(User.email == user_data.email)
-    ).first()
+    existing_user = session.exec(select(User).where(User.email == signup_data.email)).first()
     if existing_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this email already exists")
+
+    # Check if organization slug already exists
+    existing_org = session.exec(select(Organization).where(Organization.slug == signup_data.organization_slug)).first()
+    if existing_org:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exists"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Organization with this slug already exists"
         )
 
-    # Create organization if specified
-    organization = None
-    if user_data.organization_slug:
-        organization = session.exec(
-            session.query(Organization).where(Organization.slug == user_data.organization_slug)
-        ).first()
-        if not organization:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Organization not found"
-            )
+    # Enforce basic password strength (min 8 chars)
+    if len(signup_data.password) < 8:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Password too short")
+
+    # Create organization
+    organization = Organization(name=signup_data.organization_name, slug=signup_data.organization_slug)
+    session.add(organization)
+    session.commit()
+    session.refresh(organization)
 
     # Create user
-    hashed_password = User.hash_password(user_data.password)
     user = User(
-        email=user_data.email,
-        hashed_password=hashed_password,
-        first_name=user_data.first_name,
-        last_name=user_data.last_name,
-        organization_id=organization.id if organization else None
+        email=signup_data.email,
+        hashed_password=User.hash_password(signup_data.password),
+        first_name=signup_data.first_name,
+        last_name=signup_data.last_name,
+        organization_id=organization.id,
+        role="admin",  # First user in organization is admin
     )
-    
     session.add(user)
     session.commit()
     session.refresh(user)
     
-    return user
-
-
-@router.post("/auth/login")
-def login_user(email: str, password: str, session: Session = Depends(get_session)):
-    """Login user and return JWT tokens"""
-    user = session.exec(
-        session.query(User).where(User.email == email)
-    ).first()
-    
-    if not user or not user.verify_password(password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials"
-        )
-    
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User account is inactive"
-        )
-    
-    # Create token payload
+    # Create JWT token
     payload = {
+        "sub": user.email,
+        "role": user.role,
         "user_id": user.id,
         "email": user.email,
-        "role": user.role,
-        "organization_id": user.organization_id
+        "organization_id": user.organization_id,
     }
-    
-    # Return both access and refresh tokens
-    return create_token_pair(payload)
+    access_token = create_access_token(payload)
+
+    return SignupResponse(access_token=access_token, user=UserResponse.from_orm(user))
 
 
-@router.post("/auth/refresh")
-def refresh_access_token(user: User = Depends(get_current_user_from_refresh_token)):
-    """Refresh access token using refresh token"""
-    payload = {
-        "user_id": user.id,
-        "email": user.email,
-        "role": user.role,
-        "organization_id": user.organization_id
-    }
-    
-    return {
-        "access_token": create_access_token(payload),
-        "token_type": "bearer"
-    }
-
-
-# API Key Management routes
-@router.post("/auth/api-keys", response_model=dict)
-def create_api_key(role: str = "user", current_user: dict = Depends(require_role("admin"))):
-    """Create a new API key (admin only)"""
+@router.post("/token", response_model=TokenResponse)
+@limiter.limit("100/minute")
+async def create_token(request: Request, token_request: TokenRequest):
+    """
+    Create a JWT access token using a pre-provisioned API key.
+    Rate limited to 100 requests per minute per IP.
+    """
+    # Try to validate the API key using the key manager
     key_manager = create_key_manager()
-    
-    if role not in ["user", "admin"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Role must be 'user' or 'admin'"
+    role = key_manager.validate_key(token_request.api_key)
+
+    if not role:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or revoked API key")
+
+    # Create token payload (legacy API key tokens don't have organization_id)
+    payload = {"sub": f"{role}_user", "role": role}
+
+    access_token = create_access_token(payload)
+
+    return TokenResponse(access_token=access_token, role=role)
+
+
+@router.post("/validate")
+@limiter.limit("20/minute")
+async def validate_emails(
+    request: Request,
+    body: ValidateRequest,
+    validator_service: EmailValidatorService = Depends(get_validator_service),
+    user: dict = Depends(get_current_user_with_key_manager),
+):
+    """
+    Validate a list of email addresses.
+    Rate limited to 20 requests per minute per IP.
+    Uses shared validator instances for better performance.
+    """
+    try:
+        # Get organization ID for metrics
+        organization_id = user.get("organization_id", "unknown")
+        if organization_id == "unknown" and user.get("is_database_user"):
+            # For database users, get organization from session
+            session = next(get_session())
+            user_obj = session.exec(select(User).where(User.id == user.get("user_id"))).first()
+            organization_id = str(user_obj.organization_id) if user_obj and user_obj.organization_id else "unknown"
+
+        # Record batch size
+        record_batch_size(organization_id, len(body.emails))
+
+        results = await validator_service.validate_many(
+            emails=body.emails,
+            enable_smtp=body.enable_smtp,
+            enable_catch_all=body.enable_catch_all,
         )
-    
-    api_key = key_manager.create_key(role)
-    
-    return {
-        "key": api_key.key,
-        "role": api_key.role,
-        "created_at": api_key.created_at.isoformat(),
-        "message": "API key created successfully. Store it securely as it won't be shown again."
-    }
+
+        # Record metrics for each validation result
+        for result in results:
+            increment_emails_validated(result["status"], organization_id)
+
+        return {"results": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Validation error: {str(e)}")
 
 
-@router.get("/auth/api-keys", response_model=List[dict])
-def list_api_keys(current_user: dict = Depends(require_role("admin"))):
-    """List all API keys (admin only)"""
-    key_manager = create_key_manager()
-    keys = key_manager.list_keys()
-    
-    return [
-        {
-            "key": key.key[:8] + "..." + key.key[-8:],  # Show only first/last 8 chars
-            "role": key.role,
-            "created_at": key.created_at.isoformat(),
-            "revoked": key.revoked
+@router.get("/cache-stats")
+@limiter.limit("5/minute")
+async def get_cache_stats(request: Request, user: dict = Depends(require_role("admin"))):
+    """
+    Get DNS cache statistics.
+    Admin access required. Rate limited to 5 requests per minute.
+    """
+    try:
+        stats = _global_dns_validator.get_cache_stats()
+        return {
+            "cache_stats": stats,
+            "cache_enabled": _settings.ENABLE_DNS_CACHE,
+            "cache_ttl_seconds": _settings.DNS_CACHE_TTL_SECONDS,
         }
-        for key in keys
-    ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting cache stats: {str(e)}")
 
 
-@router.delete("/auth/api-keys/{key_id}")
-def revoke_api_key(key_id: str, current_user: dict = Depends(require_role("admin"))):
-    """Revoke an API key (admin only)"""
-    key_manager = create_key_manager()
-    
-    # Find the key by partial match (since we only show partial keys in list)
-    keys = key_manager.list_keys()
-    target_key = None
-    
-    for key in keys:
-        if key.key.startswith(key_id[:8]) and key.key.endswith(key_id[-8:]):
-            target_key = key.key
-            break
-    
-    if not target_key:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="API key not found"
-        )
-    
-    success = key_manager.revoke_key(target_key)
-    
-    if success:
-        return {"message": "API key revoked successfully"}
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to revoke API key"
-        )
-
-
-@router.post("/auth/api-keys/{key_id}/rotate")
-def rotate_api_key(key_id: str, current_user: dict = Depends(require_role("admin"))):
-    """Rotate an API key (revoke old, create new)"""
-    key_manager = create_key_manager()
-    
-    # Find the key by partial match
-    keys = key_manager.list_keys()
-    target_key = None
-    target_role = None
-    
-    for key in keys:
-        if key.key.startswith(key_id[:8]) and key.key.endswith(key_id[-8:]):
-            target_key = key.key
-            target_role = key.role
-            break
-    
-    if not target_key:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="API key not found"
-        )
-    
-    # Revoke old key
-    key_manager.revoke_key(target_key)
-    
-    # Create new key with same role
-    new_api_key = key_manager.create_key(target_role)
-    
-    return {
-        "old_key": target_key[:8] + "..." + target_key[-8:],
-        "new_key": new_api_key.key,
-        "role": new_api_key.role,
-        "created_at": new_api_key.created_at.isoformat(),
-        "message": "API key rotated successfully. Store the new key securely."
-    }
-
-
-# User management routes
-@router.get("/users/me", response_model=UserResponse)
-def get_current_user_info(current_user: User = Depends(get_current_user)):
-    """Get current user information"""
-    return current_user
-
-
-@router.put("/users/me", response_model=UserResponse)
-def update_current_user(
-    first_name: str = None,
-    last_name: str = None,
-    current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
-):
-    """Update current user information"""
-    if first_name is not None:
-        current_user.first_name = first_name
-    if last_name is not None:
-        current_user.last_name = last_name
-    
-    session.add(current_user)
-    session.commit()
-    session.refresh(current_user)
-    
-    return current_user
-
-
-# Organization routes
-@router.post("/organizations", response_model=OrganizationResponse, status_code=status.HTTP_201_CREATED)
-def create_organization(
-    org_data: OrganizationCreate,
-    current_user: dict = Depends(require_role("admin")),
-    session: Session = Depends(get_session)
-):
-    """Create a new organization (admin only)"""
-    # Check if organization already exists
-    existing_org = session.exec(
-        session.query(Organization).where(Organization.slug == org_data.slug)
-    ).first()
-    if existing_org:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Organization with this slug already exists"
-        )
-    
-    organization = Organization(
-        name=org_data.name,
-        slug=org_data.slug
-    )
-    
-    session.add(organization)
-    session.commit()
-    session.refresh(organization)
-    
-    return organization
-
-
-@router.get("/organizations", response_model=List[OrganizationResponse])
-def list_organizations(
-    current_user: dict = Depends(require_role("admin")),
-    session: Session = Depends(get_session)
-):
-    """List all organizations (admin only)"""
-    organizations = session.exec(session.query(Organization)).all()
-    return organizations
-
-
-# Health check
-@router.get("/health")
-def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "service": "email-validator-api"}
-
-
-# Email validation routes (existing functionality)
-@router.post("/validate/email")
-def validate_single_email(email: str, current_user: dict = Depends(get_current_user_with_key_manager)):
-    """Validate a single email address"""
-    # This would integrate with your existing email validation logic
-    # For now, return a placeholder response
-    return {
-        "email": email,
-        "is_valid": True,
-        "validation_details": {
-            "syntax": True,
-            "domain": True,
-            "mx_record": True
+@router.post("/cache-clear")
+@limiter.limit("5/minute")
+async def clear_cache(request: Request, user: dict = Depends(require_role("admin"))):
+    """
+    Clear DNS cache.
+    Admin access required. Rate limited to 5 requests per minute.
+    """
+    try:
+        cleared_count = _global_dns_validator.clear_cache()
+        return {
+            "cleared": cleared_count,
+            "message": f"DNS cache cleared successfully. Removed {cleared_count} entries.",
         }
-    }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error clearing cache: {str(e)}")
 
 
-@router.post("/validate/bulk")
-def validate_bulk_emails(emails: List[str], current_user: dict = Depends(get_current_user_with_key_manager)):
-    """Validate multiple email addresses"""
-    # This would integrate with your existing bulk validation logic
-    results = []
-    for email in emails:
-        results.append({
-            "email": email,
-            "is_valid": True,
-            "validation_details": {
-                "syntax": True,
-                "domain": True,
-                "mx_record": True
+@router.get("/bounce-stats")
+@limiter.limit("5/minute")
+async def get_bounce_stats(request: Request, user: dict = Depends(require_role("admin"))):
+    """
+    Get bounce list statistics.
+    Admin access required. Rate limited to 5 requests per minute.
+    """
+    try:
+        bounce_count = _global_bounce_validator.get_bounce_count()
+        return {
+            "bounce_stats": {
+                "bounce_count": bounce_count,
+                "loaded_in_memory": True,
+                "database_path": str(pathlib.Path(get_data_dir()) / "bounce_list.db"),
             }
-        })
-    
-    return {
-        "total_emails": len(emails),
-        "valid_emails": len([r for r in results if r["is_valid"]]),
-        "invalid_emails": len([r for r in results if not r["is_valid"]]),
-        "results": results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error getting bounce stats: {str(e)}")
+
+
+@router.post("/login", response_model=LoginResponse)
+@limiter.limit("20/minute")
+async def login(
+    request: Request,
+    login_data: LoginRequest,
+    session: Session = Depends(get_session),
+):
+    """Authenticate a user via email & password and return a JWT access token."""
+
+    user = session.exec(select(User).where(User.email == login_data.email)).first()
+
+    if not user or not user.verify_password(login_data.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
+
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="User account disabled")
+
+    payload = {
+        "sub": f"{user.role}_user",
+        "role": user.role,
+        "user_id": user.id,
+        "email": user.email,
+        "organization_id": user.organization_id,
     }
+
+    access_token = create_access_token(payload)
+    
+    return LoginResponse(
+        access_token=access_token,
+        user=UserResponse.from_orm(user),
+    )
+
+
+@router.post("/public-token", response_model=PublicTokenResponse)
+@limiter.limit("100/minute")
+async def create_public_token(request: Request):
+    """Create a short-lived JWT for unauthenticated browser clients.
+
+    The token carries the role ``public`` and is meant for low-privilege
+    read-only operations (e.g. validating e-mails).  No API key or other
+    authentication is required so that the browser bundle does **not** need
+    to embed any secret.  A HttpOnly cookie is set as well to allow
+    progressive enhancement in the future.
+    """
+
+    # Payload is intentionally minimal – no user_id / organization_id.
+    payload = {"sub": "public_user", "role": "public"}
+
+    access_token = create_access_token(payload)
+
+    # Build response and set cookie.  In production the cookie is marked
+    # *Secure* so it is only sent over HTTPS.  We default to "Lax" which
+    # works for same-site requests (the SPA is served by the same origin).
+
+    settings = get_settings()
+    secure_cookie = settings.ENVIRONMENT == "prod"
+
+    response = JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"access_token": access_token, "token_type": "bearer", "role": "public"},
+    )
+
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=secure_cookie,
+        samesite="lax",
+        max_age=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        expires=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/",
+    )
+
+    return response

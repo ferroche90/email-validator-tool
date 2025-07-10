@@ -85,6 +85,7 @@ def create_refresh_token(payload: Dict) -> str:
 def verify_token(token: str, token_type: str = "access") -> dict:
     """
     Verify and decode a JWT token with enhanced validation.
+    Supports both new tokens (with audience/issuer) and legacy tokens.
 
     Args:
         token: JWT token string
@@ -98,52 +99,51 @@ def verify_token(token: str, token_type: str = "access") -> dict:
     """
     settings = get_settings()
 
+    # Try to decode with new claims first (for new tokens)
     try:
         payload = jwt.decode(
             token,
             settings.JWT_SECRET_KEY,
             algorithms=[settings.JWT_ALGORITHM],
-            audience="email-validator-api",  # Validate audience
-            issuer="email-validator-service",  # Validate issuer
+            audience="email-validator-api",
+            issuer="email-validator-service",
         )
 
-        # Validate token type
-        if payload.get("type") != token_type:
+        # Validate token type if present
+        if payload.get("type") and payload.get("type") != token_type:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"Invalid token type. Expected {token_type}",
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Validate required claims
-        required_claims = ["exp", "iat", "jti", "aud", "iss", "type"]
-        missing_claims = [claim for claim in required_claims if claim not in payload]
-        if missing_claims:
+        logger.debug(f"Successfully verified JWT {token_type} token (new format) for role: {payload.get('role', 'unknown')}")
+        return payload
+
+    except (jwt.InvalidAudienceError, jwt.InvalidIssuerError):
+        # Try legacy format (without audience/issuer validation)
+        try:
+            payload = jwt.decode(
+                token,
+                settings.JWT_SECRET_KEY,
+                algorithms=[settings.JWT_ALGORITHM],
+            )
+            
+            logger.debug(f"Successfully verified JWT {token_type} token (legacy format) for role: {payload.get('role', 'unknown')}")
+            return payload
+            
+        except PyJWTError as e:
+            logger.warning(f"JWT token validation failed (legacy format): {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Token missing required claims: {missing_claims}",
+                detail="Could not validate credentials",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-
-        logger.debug(f"Successfully verified JWT {token_type} token for role: {payload.get('role', 'unknown')}")
-        return payload
 
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    except jwt.InvalidAudienceError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token audience",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    except jwt.InvalidIssuerError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token issuer",
             headers={"WWW-Authenticate": "Bearer"},
         )
     except PyJWTError as e:

@@ -3,7 +3,7 @@ import secrets
 from functools import lru_cache
 from typing import Optional
 
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     DEBUG: bool = Field(default=True, description="Debug mode")
 
     # JWT Configuration
-    JWT_SECRET_KEY: str = Field(description="JWT secret key (required in production)")
+    JWT_SECRET_KEY: str = Field(default="", description="JWT secret key (required in production)")
     JWT_ALGORITHM: str = Field(default="HS256", description="JWT algorithm")
     JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, description="JWT access token expiration in minutes")
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7, description="JWT refresh token expiration in days")
@@ -70,15 +70,17 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = False
 
-    @validator('JWT_SECRET_KEY', pre=True, always=True)
+    @field_validator('JWT_SECRET_KEY', mode='before')
+    @classmethod
     def validate_jwt_secret_key(cls, v):
         """Validate JWT secret key - generate secure default for dev, require env var for prod"""
-        if not v:
+        if not v or v == "":
             # Generate a secure random key for development
             return secrets.token_urlsafe(32)
         return v
 
-    @validator('ENVIRONMENT')
+    @field_validator('ENVIRONMENT')
+    @classmethod
     def validate_environment(cls, v):
         """Validate environment setting"""
         if v not in ['dev', 'prod', 'test']:
