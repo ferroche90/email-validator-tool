@@ -1,8 +1,8 @@
 """
-JWT authentication utilities.
+JWT authentication utilities with enhanced security features.
 """
 
-import os
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 
@@ -12,15 +12,10 @@ from fastapi import HTTPException, status
 from jwt import PyJWTError
 from loguru import logger
 
-# JWT Configuration
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret-key-change-in-production")
-JWT_ALGORITHM = "HS256"
-JWT_ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
-
 
 def create_access_token(payload: Dict, expires_delta: Optional[timedelta] = None) -> str:
     """
-    Create a JWT access token.
+    Create a JWT access token with enhanced security features.
 
     Args:
         payload: Data to encode in the token
@@ -38,17 +33,69 @@ def create_access_token(payload: Dict, expires_delta: Optional[timedelta] = None
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    to_encode.update({"exp": expire})
+    # Add standard JWT claims
+    to_encode.update({
+        "exp": expire,
+        "iat": datetime.now(timezone.utc),
+        "jti": secrets.token_urlsafe(16),  # JWT ID for token uniqueness
+        "aud": "email-validator-api",  # Audience claim
+        "iss": "email-validator-service",  # Issuer claim
+        "type": "access"  # Token type
+    })
 
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
-    logger.debug(f"Created JWT token for user with role: {payload.get('role', 'unknown')}")
+    logger.debug(f"Created JWT access token for user with role: {payload.get('role', 'unknown')}")
     return encoded_jwt
 
 
-def verify_token(token: str) -> dict:
-    """Verify and decode a JWT token using the runtime settings."""
+def create_refresh_token(payload: Dict) -> str:
+    """
+    Create a JWT refresh token.
 
+    Args:
+        payload: Data to encode in the token
+
+    Returns:
+        Encoded JWT refresh token string
+    """
+    settings = get_settings()
+
+    to_encode = payload.copy()
+
+    # Refresh tokens have longer expiration
+    expire = datetime.now(timezone.utc) + timedelta(days=settings.JWT_REFRESH_TOKEN_EXPIRE_DAYS)
+
+    # Add standard JWT claims for refresh token
+    to_encode.update({
+        "exp": expire,
+        "iat": datetime.now(timezone.utc),
+        "jti": secrets.token_urlsafe(16),  # JWT ID for token uniqueness
+        "aud": "email-validator-api",  # Audience claim
+        "iss": "email-validator-service",  # Issuer claim
+        "type": "refresh"  # Token type
+    })
+
+    encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+    logger.debug(f"Created JWT refresh token for user with role: {payload.get('role', 'unknown')}")
+    return encoded_jwt
+
+
+def verify_token(token: str, token_type: str = "access") -> dict:
+    """
+    Verify and decode a JWT token with enhanced validation.
+
+    Args:
+        token: JWT token string
+        token_type: Expected token type ("access" or "refresh")
+
+    Returns:
+        Decoded token payload
+
+    Raises:
+        HTTPException: If token is invalid, expired, or malformed
+    """
     settings = get_settings()
 
     try:
@@ -56,15 +103,51 @@ def verify_token(token: str) -> dict:
             token,
             settings.JWT_SECRET_KEY,
             algorithms=[settings.JWT_ALGORITHM],
+            audience="email-validator-api",  # Validate audience
+            issuer="email-validator-service",  # Validate issuer
         )
+
+        # Validate token type
+        if payload.get("type") != token_type:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Invalid token type. Expected {token_type}",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Validate required claims
+        required_claims = ["exp", "iat", "jti", "aud", "iss", "type"]
+        missing_claims = [claim for claim in required_claims if claim not in payload]
+        if missing_claims:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Token missing required claims: {missing_claims}",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        logger.debug(f"Successfully verified JWT {token_type} token for role: {payload.get('role', 'unknown')}")
         return payload
+
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except PyJWTError:
+    except jwt.InvalidAudienceError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token audience",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except jwt.InvalidIssuerError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token issuer",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except PyJWTError as e:
+        logger.warning(f"JWT token validation failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
@@ -72,9 +155,19 @@ def verify_token(token: str) -> dict:
         )
 
 
+def verify_access_token(token: str) -> dict:
+    """Verify and decode a JWT access token."""
+    return verify_token(token, "access")
+
+
+def verify_refresh_token(token: str) -> dict:
+    """Verify and decode a JWT refresh token."""
+    return verify_token(token, "refresh")
+
+
 def decode_token(token: str) -> Dict:
     """
-    Decode and validate a JWT token.
+    Decode and validate a JWT token (legacy function for backward compatibility).
 
     Args:
         token: JWT token string
@@ -88,7 +181,13 @@ def decode_token(token: str) -> Dict:
     settings = get_settings()
 
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        payload = jwt.decode(
+            token, 
+            settings.JWT_SECRET_KEY, 
+            algorithms=[settings.JWT_ALGORITHM],
+            audience="email-validator-api",
+            issuer="email-validator-service"
+        )
 
         # Check if token has expired
         exp = payload.get("exp")
@@ -104,3 +203,23 @@ def decode_token(token: str) -> Dict:
     except PyJWTError as e:
         logger.warning(f"JWT token validation failed: {str(e)}")
         raise
+
+
+def create_token_pair(payload: Dict) -> Dict[str, str]:
+    """
+    Create both access and refresh tokens.
+
+    Args:
+        payload: Data to encode in the tokens
+
+    Returns:
+        Dictionary containing access_token and refresh_token
+    """
+    access_token = create_access_token(payload)
+    refresh_token = create_refresh_token(payload)
+    
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer"
+    }

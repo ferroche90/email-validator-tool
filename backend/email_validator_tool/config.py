@@ -1,8 +1,9 @@
 import os
+import secrets
 from functools import lru_cache
 from typing import Optional
 
-from pydantic import Field
+from pydantic import Field, validator
 from pydantic_settings import BaseSettings
 
 
@@ -14,10 +15,15 @@ class Settings(BaseSettings):
     DEBUG: bool = Field(default=True, description="Debug mode")
 
     # JWT Configuration
-    JWT_SECRET_KEY: str = Field(default="dev-secret-key-change-in-production", description="JWT secret key")
+    JWT_SECRET_KEY: str = Field(description="JWT secret key (required in production)")
     JWT_ALGORITHM: str = Field(default="HS256", description="JWT algorithm")
-    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=60, description="JWT token expiration in minutes")
-
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, description="JWT access token expiration in minutes")
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7, description="JWT refresh token expiration in days")
+    
+    # Security Configuration
+    BCRYPT_WORK_FACTOR: int = Field(default=12, description="Bcrypt work factor for password hashing")
+    MINIMUM_PASSWORD_LENGTH: int = Field(default=8, description="Minimum password length")
+    
     # Database
     DATABASE_URL: str = Field(default="sqlite:///data/app.db", description="Database connection URL")
 
@@ -64,15 +70,30 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = False
 
+    @validator('JWT_SECRET_KEY', pre=True, always=True)
+    def validate_jwt_secret_key(cls, v):
+        """Validate JWT secret key - generate secure default for dev, require env var for prod"""
+        if not v:
+            # Generate a secure random key for development
+            return secrets.token_urlsafe(32)
+        return v
+
+    @validator('ENVIRONMENT')
+    def validate_environment(cls, v):
+        """Validate environment setting"""
+        if v not in ['dev', 'prod', 'test']:
+            raise ValueError('ENVIRONMENT must be dev, prod, or test')
+        return v
+
     def __init__(self, **kwargs):
         # Load environment-specific .env file before initializing
         self._load_environment_file()
 
-        # Validate production settings
-        self._validate_production_settings()
-
         # Let BaseSettings process env vars / kwargs first
         super().__init__(**kwargs)
+
+        # Validate production settings
+        self._validate_production_settings()
 
         # Ensure DATA_DIR has a concrete value.  We resolve it via helper if
         # not provided explicitly (or via EMAIL_VALIDATOR_DATA_DIR env var).
@@ -111,9 +132,30 @@ class Settings(BaseSettings):
         """Validate that production settings are secure"""
         environment = os.getenv("ENVIRONMENT", "dev")
         debug = os.getenv("DEBUG", "true").lower() == "true"
+        jwt_secret = os.getenv("JWT_SECRET_KEY")
 
-        if environment == "prod" and debug:
-            raise RuntimeError("DEBUG must be false in production environment")
+        # Fail-fast assertions for production
+        if environment == "prod":
+            if debug:
+                raise RuntimeError("❌ CRITICAL: DEBUG must be false in production environment")
+            
+            if not jwt_secret or jwt_secret == "dev-secret-key-change-in-production":
+                raise RuntimeError("❌ CRITICAL: JWT_SECRET_KEY must be set to a secure value in production")
+            
+            if len(jwt_secret) < 32:
+                raise RuntimeError("❌ CRITICAL: JWT_SECRET_KEY must be at least 32 characters long in production")
+            
+            # Check for HTTPS enforcement in CORS
+            cors_origins = os.getenv("CORS_ORIGINS", "*")
+            if cors_origins == "*":
+                raise RuntimeError("❌ CRITICAL: CORS_ORIGINS must be explicitly set in production (not *)")
+            
+            if not any(origin.startswith("https://") for origin in cors_origins.split(",")):
+                raise RuntimeError("❌ CRITICAL: CORS_ORIGINS must use HTTPS in production")
+
+        # Additional security checks for any environment
+        if jwt_secret and len(jwt_secret) < 16:
+            raise RuntimeError("❌ CRITICAL: JWT_SECRET_KEY must be at least 16 characters long")
 
 
 # Global settings instance

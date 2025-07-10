@@ -5,6 +5,8 @@ import bcrypt
 from pydantic import EmailStr
 from sqlmodel import Field, Relationship, SQLModel
 
+from email_validator_tool.config import get_settings
+
 
 class Organization(SQLModel, table=True):
     """Organization model for multi-tenancy"""
@@ -40,8 +42,9 @@ class User(SQLModel, table=True):
 
     @classmethod
     def hash_password(cls, password: str) -> str:
-        """Hash a password using bcrypt"""
-        salt = bcrypt.gensalt()
+        """Hash a password using bcrypt with configurable work factor"""
+        settings = get_settings()
+        salt = bcrypt.gensalt(rounds=settings.BCRYPT_WORK_FACTOR)
         return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
     def verify_password(self, password: str) -> bool:
@@ -63,6 +66,13 @@ class UserCreate(SQLModel):
     first_name: str = Field(max_length=100)
     last_name: str = Field(max_length=100)
     organization_slug: Optional[str] = Field(default=None, max_length=100)
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Validate password length using configurable minimum
+        settings = get_settings()
+        if len(self.password) < settings.MINIMUM_PASSWORD_LENGTH:
+            raise ValueError(f"Password must be at least {settings.MINIMUM_PASSWORD_LENGTH} characters long")
 
 
 class UserResponse(SQLModel):
