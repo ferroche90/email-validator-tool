@@ -18,12 +18,9 @@ Before starting, ensure you have the following installed:
 cd email-validator-tool
 
 # Create virtual environment
-python -m venv .venv
+python3 -m venv .venv
 
 # Activate virtual environment
-# On Windows:
-.venv\Scripts\activate
-# On macOS/Linux:
 source .venv/bin/activate
 ```
 
@@ -230,8 +227,7 @@ make clear-cache           # Clear DNS cache
 If you get "port already in use" errors:
 ```bash
 # Find processes using the port
-netstat -ano | findstr :8000  # Windows
-lsof -i :8000                 # macOS/Linux
+lsof -i :8000                 # Linux/macOS
 
 # Kill the process or use different ports
 uvicorn app.main:app --reload --port 8001
@@ -258,8 +254,8 @@ If you have Python dependency conflicts:
 ```bash
 # Recreate virtual environment
 rm -rf .venv
-python -m venv .venv
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -e .[backend,dev]
 ```
 

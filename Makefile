@@ -35,9 +35,15 @@ help:
 # Setup commands
 setup-env:
 	@echo Setting up environment files...
+ifeq ($(OS),Windows_NT)
 	@if not exist ".env" copy "infra\env\dev.example.env" ".env"
 	@if not exist "frontend\.env" copy "infra\env\frontend.example.env" "frontend\.env"
 	@if not exist "data" mkdir data
+else
+	@test -f .env || cp infra/env/dev.example.env .env
+	@test -f frontend/.env || cp infra/env/frontend.example.env frontend/.env
+	@mkdir -p data
+endif
 	@echo ✅ Environment setup complete!
 
 setup-db:

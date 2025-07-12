@@ -6,12 +6,9 @@ This guide explains how to use the Prometheus and Grafana monitoring stack for y
 
 ### Option 1: Using the startup script (Recommended)
 ```bash
-# On Linux/Mac:
+# On Linux/macOS:
 chmod +x start-monitoring.sh
 ./start-monitoring.sh
-
-# On Windows:
-start-monitoring.bat
 ```
 
 ### Option 2: Manual startup

@@ -129,7 +129,7 @@ Services:
 ### 5.2 Local Developer Setup
 ```bash
 # Backend + CLI
-python -m venv .venv && source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+python3 -m venv .venv && source .venv/bin/activate
 pip install -e .[backend,dev]
 cp infra/env/dev.example.env .env
 alembic -c backend/alembic.ini upgrade head
