@@ -85,6 +85,7 @@ class EmailValidatorService:
                     {
                         # Core fields
                         "address": result.email,
+                        "email": result.email,  # Backward compatibility for frontend
                         "status": (
                             result.status.value if isinstance(result.status, ValidationStatus) else str(result.status)
                         ),
