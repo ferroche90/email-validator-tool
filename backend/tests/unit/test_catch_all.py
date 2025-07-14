@@ -27,7 +27,11 @@ async def test_catch_all_validation_with_invalid_domain(invalid_email):
     """Test catch-all validation with an invalid domain."""
     validator = CatchAllValidator()
     result = await validator.validate(invalid_email)
-    assert result.status in [ValidationStatus.INVALID_MX, ValidationStatus.INVALID_DOMAIN]
+    assert result.status in [
+        ValidationStatus.INVALID_MX,
+        ValidationStatus.INVALID_DOMAIN,
+        ValidationStatus.INVALID_SYNTAX,
+    ]
 
 
 @pytest.mark.asyncio

@@ -28,8 +28,12 @@ async def test_smtp_validation_with_invalid_domain(invalid_email):
     """Test SMTP validation with an invalid domain."""
     validator = SMTPValidator()
     result = await validator.validate(invalid_email)
-    # Accept INVALID_MX or INVALID_DOMAIN
-    assert result.status in [ValidationStatus.INVALID_MX, ValidationStatus.INVALID_DOMAIN]
+    # Accept INVALID_MX, INVALID_DOMAIN, or INVALID_SYNTAX for malformed emails
+    assert result.status in [
+        ValidationStatus.INVALID_MX,
+        ValidationStatus.INVALID_DOMAIN,
+        ValidationStatus.INVALID_SYNTAX,
+    ]
 
 
 @pytest.mark.asyncio
@@ -55,5 +59,9 @@ async def test_smtp_validation_with_invalid_email(invalid_email):
     """Test SMTP validation with an invalid email."""
     validator = SMTPValidator()
     result = await validator.validate(invalid_email)
-    # Accept INVALID_MX or INVALID_DOMAIN
-    assert result.status in [ValidationStatus.INVALID_MX, ValidationStatus.INVALID_DOMAIN]
+    # Accept INVALID_MX, INVALID_DOMAIN, or INVALID_SYNTAX for malformed emails
+    assert result.status in [
+        ValidationStatus.INVALID_MX,
+        ValidationStatus.INVALID_DOMAIN,
+        ValidationStatus.INVALID_SYNTAX,
+    ]

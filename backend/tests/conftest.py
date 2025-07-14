@@ -130,8 +130,8 @@ def valid_email():
 
 @pytest.fixture
 def invalid_email():
-    """Return an invalid email address for testing."""
-    return "invalid@email"
+    """Return an email with a non-existent domain for testing."""
+    return "test@nonexistent-domain-for-testing.com"
 
 
 @pytest.fixture

@@ -82,9 +82,10 @@ class CatchAllValidator:
             # Generate a random, non-existent email address
             fake_email = f"{generate_random_string()}@{domain}"
 
-            # Get MX records for the domain
+            # Get MX records for the domain, running the synchronous DNS query in an executor
             try:
-                mx_records = dns.resolver.resolve(domain, "MX")
+                loop = asyncio.get_event_loop()
+                mx_records = await loop.run_in_executor(None, dns.resolver.resolve, domain, "MX")
                 if not mx_records:
                     result = ValidationResult(
                         email=email,

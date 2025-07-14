@@ -1,3 +1,4 @@
+import asyncio
 import re
 
 import aiosmtplib
@@ -35,9 +36,10 @@ class SMTPValidator:
             # Global throttle between validators
             await enforce_domain_delay(domain)
 
-            # Get MX records
+            # Get MX records, running the synchronous DNS query in an executor
             try:
-                mx_records = dns.resolver.resolve(domain, "MX")
+                loop = asyncio.get_event_loop()
+                mx_records = await loop.run_in_executor(None, dns.resolver.resolve, domain, "MX")
                 if not mx_records:
                     return ValidationResult(
                         email=email,
@@ -162,6 +164,12 @@ class SMTPValidator:
                     details=simplified_msg,
                 )
 
+        except IndexError:
+            return ValidationResult(
+                email=email,
+                status=ValidationStatus.INVALID_SYNTAX,
+                details="Malformed email address",
+            )
         except Exception as e:
             logger.error(f"Error during SMTP verification of {email}: {str(e)}")
             return ValidationResult(

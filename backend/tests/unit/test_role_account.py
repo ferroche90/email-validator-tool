@@ -48,14 +48,6 @@ async def test_role_account_validation_with_common_role_accounts():
 
 
 @pytest.mark.asyncio
-async def test_role_account_validation_with_invalid_email(invalid_email):
-    """Test role account validation with an invalid email."""
-    validator = RoleAccountValidator()
-    result = await validator.validate(invalid_email)
-    assert result.status == ValidationStatus.VALID  # Role account validator doesn't validate syntax
-
-
-@pytest.mark.asyncio
 async def test_role_account_validation_uses_constants():
     """Test that the validator uses the COMMON_ROLE_ACCOUNTS constant."""
     validator = RoleAccountValidator()

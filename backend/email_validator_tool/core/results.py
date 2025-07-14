@@ -1,7 +1,31 @@
-from typing import Dict, List
+from typing import Any, Dict, List, Optional
 
 from email_validator_tool.core.models import ValidationResult, ValidationStatus
 from loguru import logger
+
+
+def convert_results_to_dicts(
+    results: List[ValidationResult], domain_info_map: Optional[Dict[str, Dict[str, Any]]] = None
+) -> List[Dict[str, Any]]:
+    """
+    Convert a list of ValidationResult objects to dictionaries suitable for API responses.
+
+    Args:
+        results: List of validation results
+        domain_info_map: Optional mapping of domain -> domain_info for enrichment
+
+    Returns:
+        List of dictionaries representing validation results
+    """
+    domain_info_map = domain_info_map or {}
+
+    return [
+        result.to_dict(
+            include_domain_info=True,
+            domain_info=domain_info_map.get(result.email.split("@")[-1] if "@" in result.email else ""),
+        )
+        for result in results
+    ]
 
 
 def generate_summary(results: List[ValidationResult]) -> None:
